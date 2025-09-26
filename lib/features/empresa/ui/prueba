@@ -1,0 +1,65 @@
+// lib/features/empresa/logic/venta_producto_manager.dart
+
+// ... (resto del código)
+
+  Future<bool> abrirUnidad(String idLote, String abiertoPor) async {
+    try {
+      final lote = _lotesDisponibles.firstWhere((l) => l.id == idLote);
+
+      // Verificar si hay unidades disponibles para abrir
+      if (lote.cantidadDisponible < 1) {
+        _error = 'No hay unidades disponibles para abrir';
+        notifyListeners();
+        return false;
+      }
+
+      // Verificar si ya hay unidades abiertas
+      final unidadesAbiertasDelLote = _unidadesAbiertasDisponibles
+          .where((u) => u.idStockLoteTienda == idLote && !u.estaCerrada)
+          .toList();
+
+      if (unidadesAbiertasDelLote.isNotEmpty) {
+        _error = 'Ya hay una unidad abierta de este lote';
+        notifyListeners();
+        return false;
+      }
+
+      // Abrir la unidad
+      final idUnidad = await _unidadAbiertaManager.abrirUnidad(
+        idLote,
+        lote.cantidadPorUnidad,
+        abiertoPor,
+      );
+
+      if (idUnidad.isNotEmpty) {
+        // Actualizar el lote usando el método público
+        final loteActualizado = lote.copyWith(
+          unidadesAbiertas: lote.unidadesAbiertas + 1,
+        );
+
+        // USAR EL NUEVO MÉTODO PÚBLICO
+        final resultado = await _loteManager.actualizarLote(loteActualizado);
+        
+        if (resultado) {
+          // Recargar unidades abiertas
+          await _unidadAbiertaManager.cargarUnidadesAbiertasPorTienda(
+            lote.idStockTienda,
+          );
+          _unidadesAbiertasDisponibles = _unidadAbiertaManager.unidadesAbiertas;
+          return true;
+        } else {
+          _error = 'No se pudo actualizar el lote';
+          notifyListeners();
+          return false;
+        }
+      } else {
+        _error = 'No se pudo abrir la unidad';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
