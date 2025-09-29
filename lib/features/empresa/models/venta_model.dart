@@ -1,4 +1,4 @@
-// lib/features/venta/models/venta_model.dart
+// lib/features/empresa/models/venta_model.dart
 
 class Venta {
   final String id;
@@ -19,35 +19,28 @@ class Venta {
     required this.total,
     required this.realizadoPor,
     required this.items,
-    this.deleted = false,
+    required this.deleted,
     required this.updatedAt,
   });
 
+  // Factory constructor para crear desde JSON
   factory Venta.fromJson(Map<String, dynamic> json, String id) {
-    var itemsList = <VentaItem>[];
-    if (json['items'] != null) {
-      itemsList = (json['items'] as List)
-          .map((item) => VentaItem.fromJson(item))
-          .toList();
-    }
-
     return Venta(
       id: id,
       idTienda: json['idTienda'] ?? '',
       idEmpresa: json['idEmpresa'] ?? '',
-      fechaVenta: json['fechaVenta'] != null
-          ? DateTime.parse(json['fechaVenta'])
-          : DateTime.now(), // Valor por defecto si es nulo
+      fechaVenta: DateTime.parse(json['fechaVenta']),
       total: (json['total'] ?? 0).toDouble(),
       realizadoPor: json['realizadoPor'] ?? '',
+      items: (json['items'] as List)
+          .map((item) => VentaItem.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
       deleted: json['deleted'] ?? false,
-      updatedAt:
-          json['updatedAt'] ??
-          DateTime.now().toIso8601String(), // Valor por defecto si es nulo
-      items: itemsList,
+      updatedAt: json['updatedAt'] ?? '',
     );
   }
 
+  // Método para convertir a JSON
   Map<String, dynamic> toJson() {
     return {
       'idTienda': idTienda,
@@ -56,8 +49,8 @@ class Venta {
       'total': total,
       'realizadoPor': realizadoPor,
       'items': items.map((item) => item.toJson()).toList(),
-      'deleted': deleted, // Agregado campo deleted
-      'updatedAt': updatedAt, // Agregado campo updatedAt
+      'deleted': deleted,
+      'updatedAt': updatedAt,
     };
   }
 }
@@ -71,28 +64,37 @@ class VentaItem {
   final double precio;
   final int cantidad;
   final double subtotal;
+  final String tipoVenta; // 'UNIDAD_COMPLETA' o 'UNIDAD_ABIERTA'
+  final String? idStockTienda; // Referencia al stock de tienda
+  final String? idStockUnidadAbierta; // Referencia a la unidad abierta
 
   VentaItem({
     required this.idProducto,
     required this.nombreProducto,
-    required this.idColor,
-    required this.nombreColor,
-    required this.codigoColor,
+    this.idColor,
+    this.nombreColor,
+    this.codigoColor,
     required this.precio,
     required this.cantidad,
     required this.subtotal,
+    required this.tipoVenta,
+    this.idStockTienda,
+    this.idStockUnidadAbierta,
   });
 
   factory VentaItem.fromJson(Map<String, dynamic> json) {
     return VentaItem(
       idProducto: json['idProducto'] ?? '',
       nombreProducto: json['nombreProducto'] ?? '',
-      idColor: json['idColor'] ?? '',
-      nombreColor: json['nombreColor'] ?? '',
-      codigoColor: json['codigoColor'] ?? '',
+      idColor: json['idColor'],
+      nombreColor: json['nombreColor'],
+      codigoColor: json['codigoColor'],
       precio: (json['precio'] ?? 0).toDouble(),
       cantidad: json['cantidad'] ?? 0,
       subtotal: (json['subtotal'] ?? 0).toDouble(),
+      tipoVenta: json['tipoVenta'] ?? '',
+      idStockTienda: json['idStockTienda'],
+      idStockUnidadAbierta: json['idStockUnidadAbierta'],
     );
   }
 
@@ -106,6 +108,9 @@ class VentaItem {
       'precio': precio,
       'cantidad': cantidad,
       'subtotal': subtotal,
+      'tipoVenta': tipoVenta,
+      'idStockTienda': idStockTienda,
+      'idStockUnidadAbierta': idStockUnidadAbierta,
     };
   }
 }

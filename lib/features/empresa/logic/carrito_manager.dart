@@ -1,82 +1,55 @@
 // lib/features/empresa/logic/carrito_manager.dart
-import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/carrito_item_model.dart';
 
 class CarritoManager extends ChangeNotifier {
-  final List<CarritoItem> _items = [];
-  final StreamController<int> _cantidadItemsController =
-      StreamController<int>.broadcast();
+  List<CarritoItem> _items = [];
 
-  List<CarritoItem> get items => List.unmodifiable(_items);
+  List<CarritoItem> get items => _items;
 
-  Stream<int> get cantidadItemsStream => _cantidadItemsController.stream;
+  int get totalItems => _items.fold(0, (sum, item) => sum + item.cantidad);
 
-  int get totalItems {
-    return _items.fold(0, (sum, item) => sum + item.cantidad);
-  }
+  double get total =>
+      _items.fold(0, (sum, item) => sum + (item.precio * item.cantidad));
 
-  double get total {
-    return _items.fold(0, (sum, item) => sum + item.subtotal);
-  }
-
-  void agregarItem(CarritoItem item) {
-    final index = _items.indexWhere((i) => i.id == item.id);
-    if (index >= 0) {
-      _items[index].actualizarCantidad(_items[index].cantidad + item.cantidad);
-    } else {
-      _items.add(item);
-    }
+  void agregarUnidadCompleta(CarritoItem item, String idStockTienda) {
+    _items.add(item);
     notifyListeners();
-    _cantidadItemsController.add(totalItems);
   }
 
-  void agregarUnidadCompleta(CarritoItem item, String idStockLoteTienda) {
-    final itemConTipo = item.copyWith(
-      tipoVenta: 'UNIDAD_COMPLETA',
-      idStockLoteTienda: idStockLoteTienda,
-    );
-    agregarItem(itemConTipo);
+  void agregarUnidadAbierta(CarritoItem item, String idStockTienda) {
+    _items.add(item);
+    notifyListeners();
   }
 
-  void agregarPorMetro(CarritoItem item, String idStockUnidadAbierta) {
-    final itemConTipo = item.copyWith(
-      tipoVenta: 'UNIDAD_ABIERTA',
-      idStockUnidadAbierta: idStockUnidadAbierta,
-    );
-    agregarItem(itemConTipo);
+  void agregarPorMetro(CarritoItem item, String idUnidadAbierta) {
+    _items.add(item);
+    notifyListeners();
   }
 
+  void removeItem(String id) {
+    _items.removeWhere((item) => item.id == id);
+    notifyListeners();
+  }
+
+  // Método para actualizar la cantidad de un item
   void actualizarCantidad(String id, int nuevaCantidad) {
-    if (nuevaCantidad <= 0) {
-      removerItem(id);
-      return;
-    }
-
     final index = _items.indexWhere((item) => item.id == id);
-    if (index >= 0) {
-      _items[index].actualizarCantidad(nuevaCantidad);
+    if (index != -1) {
+      _items[index] = _items[index].copyWith(cantidad: nuevaCantidad);
       notifyListeners();
-      _cantidadItemsController.add(totalItems);
     }
   }
 
+  // Método para remover un item (renombrado para coincidir con el código)
   void removerItem(String id) {
     _items.removeWhere((item) => item.id == id);
     notifyListeners();
-    _cantidadItemsController.add(totalItems);
   }
 
   void vaciarCarrito() {
     _items.clear();
     notifyListeners();
-    _cantidadItemsController.add(0);
-  }
-
-  @override
-  void dispose() {
-    _cantidadItemsController.close();
-    super.dispose();
   }
 }

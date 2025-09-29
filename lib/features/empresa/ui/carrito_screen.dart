@@ -295,19 +295,19 @@ class _CarritoScreenState extends State<CarritoScreen>
   void _confirmarVenta(BuildContext context, CarritoManager carritoManager) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Confirmar Venta'),
         content: Text(
           '¿Está seguro de realizar esta venta por un total de \$${carritoManager.total.toStringAsFixed(2)}?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext); // Cerrar el diálogo de confirmación
               _realizarVenta(context, carritoManager);
             },
             child: const Text('Vender'),
@@ -325,15 +325,17 @@ class _CarritoScreenState extends State<CarritoScreen>
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    // Crear la venta
+    // Obtener el usuario actual (aquí deberías obtenerlo de tu sistema de autenticación)
+    final usuario = 'usuario_actual'; // Reemplazar con el usuario real
+
+    // Crear la venta con todos los detalles necesarios
     final venta = Venta(
       id: '', // El ID será generado por Firebase
       idTienda: widget.tienda.id,
       idEmpresa: widget.empresaId,
       fechaVenta: DateTime.now(),
       total: carritoManager.total,
-      realizadoPor:
-          'usuario_actual', // Debe obtenerse del sistema de autenticación
+      realizadoPor: usuario,
       items: carritoManager.items
           .map(
             (item) => VentaItem(
@@ -345,6 +347,9 @@ class _CarritoScreenState extends State<CarritoScreen>
               precio: item.precio,
               cantidad: item.cantidad,
               subtotal: item.subtotal,
+              tipoVenta: item.tipoVenta,
+              idStockTienda: item.idStockTienda,
+              idStockUnidadAbierta: item.idStockUnidadAbierta,
             ),
           )
           .toList(),
@@ -353,34 +358,55 @@ class _CarritoScreenState extends State<CarritoScreen>
     );
 
     // Registrar la venta
-    context.read<VentaManager>().registrarVenta(venta).then((success) {
-      Navigator.pop(context); // Cerrar indicador de carga
+    context
+        .read<VentaManager>()
+        .registrarVenta(venta)
+        .then((success) {
+          // Cerrar indicador de carga usando una forma segura
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
 
-      if (success) {
-        // Vaciar carrito
-        carritoManager.vaciarCarrito();
+          if (success) {
+            // Vaciar carrito
+            carritoManager.vaciarCarrito();
 
-        // Cambiar a la pestaña de ventas
-        _tabController.animateTo(1);
+            // Cambiar a la pestaña de ventas
+            _tabController.animateTo(1);
 
-        // Mostrar mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Venta realizada con éxito'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error al realizar la venta: ${context.read<VentaManager>().error}',
+            // Mostrar mensaje de éxito
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Venta realizada con éxito'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            // Mostrar mensaje de error
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Error al realizar la venta: ${context.read<VentaManager>().error}',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        })
+        .catchError((error) {
+          // Cerrar indicador de carga usando una forma segura
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+
+          // Mostrar mensaje de error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error inesperado: $error'),
+              backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    });
+          );
+        });
   }
 
   void _verDetalleVenta(Venta venta) {

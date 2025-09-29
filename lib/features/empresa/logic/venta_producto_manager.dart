@@ -1,6 +1,7 @@
 // lib/features/empresa/logic/venta_producto_manager.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/features/empresa/services/stock_lote_tienda_service.dart';
 import '../models/stock_empresa_model.dart';
 import '../models/color_model.dart';
 import '../models/tipo_producto_model.dart';
@@ -14,6 +15,7 @@ import '../services/tipo_producto_service.dart';
 import '../services/stock_tienda_service.dart';
 import 'stock_lote_tienda_manager.dart';
 import 'stock_unidad_abierta_manager.dart';
+import '../services/stock_tienda_service.dart';
 
 class VentaProductoManager extends ChangeNotifier {
   final StockTiendaService _stockTiendaService = StockTiendaService();
@@ -22,6 +24,9 @@ class VentaProductoManager extends ChangeNotifier {
   final StockLoteTiendaManager _loteManager = StockLoteTiendaManager();
   final StockUnidadAbiertaManager _unidadAbiertaManager =
       StockUnidadAbiertaManager();
+
+  final StockLoteTiendaService _stockLoteTiendaService =
+      StockLoteTiendaService();
 
   List<StockTienda> _productosConStock = [];
   List<ColorProducto> _coloresDisponibles = [];
@@ -178,60 +183,66 @@ class VentaProductoManager extends ChangeNotifier {
     }
   }
 
-  // Nuevo método para abrir una unidad
-  Future<bool> abrirRollo(
-    String idLote,
+  /*Future<bool> abrirRollo(
+    String idStockTienda,
     String abiertoPor,
     String idTienda,
   ) async {
     try {
-      final lote = _lotesDisponibles.firstWhere((l) => l.id == idLote);
+      // Obtener el stock de tienda actualizado
+      final stockTienda = await _stockTiendaService.getStockById(idStockTienda);
 
-      // Verificar si hay unidades disponibles para abrir
-      if (lote.cantidadDisponible < 1) {
-        _error = 'No hay unidades disponibles para abrir';
+      if (stockTienda == null) {
+        _error = 'No se encontró el stock de tienda';
         notifyListeners();
         return false;
       }
 
-      // Verificar si ya hay unidades abiertas
-      final unidadesAbiertasDelLote = _unidadesAbiertasDisponibles
-          .where((u) => u.idStockLoteTienda == idLote && !u.estaCerrada)
-          .toList();
-
-      if (unidadesAbiertasDelLote.isNotEmpty) {
-        _error = 'Ya hay una unidad abierta de este lote';
+      // Verificar si hay stock disponible para abrir
+      if (stockTienda.cantidadDisponible < 1) {
+        _error = 'No hay stock disponible para abrir';
         notifyListeners();
         return false;
       }
 
-      // Abrir la unidad
-      final idUnidad = await _unidadAbiertaManager.abrirUnidad(
-        idLote,
-        lote.cantidadPorUnidad,
-        abiertoPor,
+      // Crear un nuevo lote para el rollo abierto
+      final nuevoLote = StockLoteTienda(
+        id: '', // El ID será generado por Firebase
+        idStockTienda: idStockTienda,
+        cantidad: stockTienda.cantidadPrioritaria,
+        cantidadVendida: 0,
+        fechaApertura: DateTime.now(),
+        abiertoPor: abiertoPor,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
-      if (idUnidad.isNotEmpty) {
-        // Actualizar el lote
-        final loteActualizado = lote.copyWith(
-          unidadesAbiertas: lote.unidadesAbiertas + 1,
+      // Registrar el nuevo lote
+      final idLote = await _stockLoteTiendaService.createStockLoteTienda(
+        nuevoLote,
+      );
+
+      if (idLote.isNotEmpty) {
+        // Actualizar el stock de tienda
+        final stockActualizado = stockTienda.copyWith(
+          cantidadAperturada: stockTienda.cantidadAperturada + 1,
         );
 
-        final resultado = await _loteManager.actualizarLote(loteActualizado);
+        final resultado = await _stockTiendaService.updateStockTienda(
+          stockActualizado,
+        );
 
         if (resultado) {
-          // Recargar unidades abiertas
-          await _unidadAbiertaManager.cargarUnidadesAbiertasPorTienda(idTienda);
-          _unidadesAbiertasDisponibles = _unidadAbiertaManager.unidadesAbiertas;
+          // Recargar datos
+          await cargarDatosIniciales(idTienda);
           return true;
         } else {
-          _error = 'No se pudo actualizar el lote';
+          _error = 'No se pudo actualizar el stock de tienda';
           notifyListeners();
           return false;
         }
       } else {
-        _error = 'No se pudo abrir la unidad';
+        _error = 'No se pudo crear el lote';
         notifyListeners();
         return false;
       }
@@ -241,12 +252,16 @@ class VentaProductoManager extends ChangeNotifier {
       return false;
     }
   }
-
-  // Método para vender un rollo completo
-  Future<bool> venderRollo(String idLote, int cantidad, String idTienda) async {
+*/
+  // Método para vender por metro
+  Future<bool> venderPorMetro(
+    String idLote,
+    int cantidad,
+    String idTienda,
+  ) async {
     try {
-      // Obtener el lote actualizado desde el servidor
-      final lote = await _loteManager.getLoteById(idLote);
+      // Obtener el lote actualizado
+      final lote = await _stockLoteTiendaService.getLoteById(idLote);
 
       if (lote == null) {
         _error = 'No se encontró el lote';
@@ -264,73 +279,22 @@ class VentaProductoManager extends ChangeNotifier {
       // Actualizar el lote
       final loteActualizado = lote.copyWith(
         cantidadVendida: lote.cantidadVendida + cantidad,
-        cantidadDisponible: lote.cantidadDisponible - cantidad,
       );
 
-      final resultado = await _loteManager.actualizarLote(loteActualizado);
+      /*final resultado = await _stockLoteTiendaService.updateStockLoteTienda(
+        loteActualizado,
+      );
 
       if (resultado) {
-        // Recargar lotes
-        await _loteManager.cargarLotesPorTienda(idTienda);
-        _lotesDisponibles = _loteManager.lotes;
+        // Recargar datos
+        await cargarDatosIniciales(idTienda);
         return true;
       } else {
         _error = 'No se pudo actualizar el lote';
         notifyListeners();
         return false;
-      }
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      }*/
       return false;
-    }
-  }
-
-  // Método para vender por metro
-  Future<bool> venderPorMetro(
-    String idUnidadAbierta,
-    int cantidad,
-    String idTienda,
-  ) async {
-    try {
-      // Obtener la unidad abierta actualizada desde el servidor
-      final unidad = await _unidadAbiertaManager.getUnidadAbiertaById(
-        idUnidadAbierta,
-      );
-
-      if (unidad == null) {
-        _error = 'No se encontró la unidad abierta';
-        notifyListeners();
-        return false;
-      }
-
-      // Verificar si hay suficiente stock
-      if (unidad.cantidadDisponible < cantidad) {
-        _error = 'Stock insuficiente';
-        notifyListeners();
-        return false;
-      }
-
-      // Actualizar la unidad abierta
-      final unidadActualizada = unidad.copyWith(
-        cantidadVendida: unidad.cantidadVendida + cantidad,
-        cantidadDisponible: unidad.cantidadDisponible - cantidad,
-      );
-
-      final resultado = await _unidadAbiertaManager.actualizarUnidadAbierta(
-        unidadActualizada,
-      );
-
-      if (resultado) {
-        // Recargar unidades abiertas
-        await _unidadAbiertaManager.cargarUnidadesAbiertasPorTienda(idTienda);
-        _unidadesAbiertasDisponibles = _unidadAbiertaManager.unidadesAbiertas;
-        return true;
-      } else {
-        _error = 'No se pudo actualizar la unidad abierta';
-        notifyListeners();
-        return false;
-      }
     } catch (e) {
       _error = e.toString();
       notifyListeners();

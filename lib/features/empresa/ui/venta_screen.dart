@@ -353,7 +353,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
       futureStocks = _cargarStocks(manager, stock);
     }
 
-    // Escuchar cuando el tab cambia
     tabController.addListener(() {
       if (tabController.index == tabIndex) {
         cargar();
@@ -362,7 +361,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
 
     return StatefulBuilder(
       builder: (context, setState) {
-        // Si es la primera vez, cargar
         if (futureStocks == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             cargar();
@@ -402,12 +400,13 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
               itemCount: stocksDisponibles.length,
               itemBuilder: (context, index) {
                 final stockTienda = stocksDisponibles[index];
+
                 return Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 8,
+                    vertical: 6,
                   ),
-                  elevation: 3,
+                  elevation: 2,
                   child: ListTile(
                     leading: Container(
                       width: 24,
@@ -418,17 +417,38 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                         border: Border.all(color: Colors.grey),
                       ),
                     ),
-                    title: Text(stockTienda.nombre),
-                    subtitle: Text('Color: ${stockTienda.colorNombre}'),
-                    trailing: Text(
-                      'Disponible8: ${stockTienda.cantidadDisponible} ${stockTienda.unidadMedida}',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    title: Text(
+                      '${stockTienda.nombre} - ${stockTienda.colorNombre}',
                     ),
-                    onTap: () => _mostrarDialogoVentaPorRollo(
-                      context,
-                      manager,
-                      stockTienda,
-                      stock,
+                    subtitle: Text(
+                      'Disponible: ${stockTienda.cantidadDisponible} ${stock.unidadMedida}\n'
+                      'Ingreso: ${stockTienda.fechaIngresoStock.toLocal().toString().split(" ")[0]}',
+                    ),
+                    isThreeLine: true,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.shopping_cart, color: Colors.green),
+                          tooltip: 'Vender',
+                          onPressed: () => _mostrarDialogoVentaPorRollo(
+                            context,
+                            manager,
+                            stockTienda,
+                            stock,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.lock_open, color: Colors.blue),
+                          tooltip: 'Abrir Unidad',
+                          onPressed: () => _abrirUnidad(
+                            context,
+                            stockTienda,
+                            manager,
+                            stock,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -437,6 +457,128 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
           },
         );
       },
+    );
+  }
+
+  void _abrirUnidad(
+    BuildContext context,
+    StockTienda stockTienda,
+    VentaProductoManager manager,
+    StockTienda stock,
+  ) {
+    final carritoManager = Provider.of<CarritoManager>(context, listen: false);
+    final TextEditingController cantidadController = TextEditingController(
+      text: '1',
+    );
+    bool desbloqueado = false;
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: Text('Abrir unidad de ${stock.nombre}'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Nombre: ${stock.nombre}'),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: cantidadController,
+                          enabled: desbloqueado,
+                          decoration: InputDecoration(
+                            labelText: 'Cantidad (${stock.unidadMedida})',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty)
+                              return 'Ingrese una cantidad';
+                            final cantidad = int.tryParse(value);
+                            if (cantidad == null || cantidad <= 0)
+                              return 'Cantidad inválida';
+                            if (cantidad > stockTienda.cantidadDisponible) {
+                              return 'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(desbloqueado ? Icons.lock_open : Icons.lock),
+                        onPressed: () {
+                          setStateDialog(() {
+                            desbloqueado = true; // desbloquea el input
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  if (formKey.currentState!.validate()) {
+                    final cantidad = int.parse(cantidadController.text);
+
+                    // Aquí vendes la cantidad abierta
+                    final resultado = await manager.venderStockTienda(
+                      stockTienda.id,
+                      cantidad,
+                      stockTienda.idTienda,
+                    );
+
+                    if (resultado) {
+                      final item = CarritoItem(
+                        id: '${stockTienda.id}_unidad',
+                        idProducto: stock.id,
+                        nombreProducto: stock.nombre,
+                        idColor: stock.idColor,
+                        nombreColor: stock.colorNombre,
+                        codigoColor: stock.colorCodigo,
+                        precio: stock.precioVentaMenor,
+                        cantidad: cantidad,
+                        tipoVenta: 'UNIDAD_ABIERTA',
+                      );
+
+                      //carritoManager.agregarUnidadAbierta(item, stockTienda.id);
+
+                      Navigator.pop(context);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Unidad agregada al carrito'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: ${manager.error}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: Text('Agregar'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -462,103 +604,279 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     final TextEditingController cantidadController = TextEditingController(
       text: '1',
     );
+    final TextEditingController precioController = TextEditingController();
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+    // Calcular precio inicial (cantidadPrioritaria * precioVentaMenor)
+    final precioInicial = stock.cantidadPrioritaria * stock.precioVentaMenor;
+    precioController.text = precioInicial.toStringAsFixed(2);
+
+    // Variable para el subtotal
+    double subtotal = precioInicial;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Vender por ${stock.unidadMedida}'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Producto: ${stock.nombre}'),
-              Text('Color: ${stock.colorNombre}'),
-              Text(
-                'Disponible6: ${stockTienda.cantidadDisponible} ${stock.unidadMedida}',
-              ),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: cantidadController,
-                decoration: InputDecoration(
-                  labelText: 'Cantidad (${stock.unidadMedida})',
-                  border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          // Calcular subtotal cuando cambian los valores
+          void calcularSubtotal() {
+            final cantidad = int.tryParse(cantidadController.text) ?? 0;
+            final precio = double.tryParse(precioController.text) ?? 0;
+            setState(() {
+              subtotal = cantidad * precio;
+            });
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: _parseColor(stock.colorCodigo),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Agregar al carrito - ${stock.unidadMedida}',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ingrese una cantidad';
+                Divider(),
+              ],
+            ),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Información del producto
+                    _buildInfoCard(
+                      title: 'Información del Producto',
+                      children: [
+                        _buildInfoRow('Producto:', stock.nombre),
+                        _buildInfoRow(
+                          'Color:',
+                          stock.colorNombre ?? 'Sin color',
+                        ),
+                        _buildInfoRow(
+                          'Disponible:',
+                          '${stockTienda.cantidadDisponible} ${stock.unidadMedida}',
+                        ),
+                        _buildInfoRow(
+                          'Fecha de ingreso:',
+                          stock.fechaIngresoStock.toString().substring(0, 10),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 16),
+
+                    // Campos de entrada
+                    _buildInputCard(
+                      title: 'Detalles de Venta',
+                      children: [
+                        TextFormField(
+                          controller: cantidadController,
+                          decoration: InputDecoration(
+                            labelText: 'Cantidad (${stock.unidadMedida})',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.inventory_2),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) => calcularSubtotal(),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Ingrese una cantidad';
+                            }
+                            final cantidad = int.tryParse(value);
+                            if (cantidad == null || cantidad <= 0) {
+                              return 'Ingrese una cantidad válida';
+                            }
+                            if (cantidad > stockTienda.cantidadDisponible) {
+                              return 'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: 12),
+                        TextFormField(
+                          controller: precioController,
+                          decoration: InputDecoration(
+                            labelText: 'Precio por ${stock.unidadMedida}',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.attach_money),
+                            suffixText: 'Bs',
+                          ),
+                          keyboardType: TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          onChanged: (value) => calcularSubtotal(),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Ingrese un precio';
+                            }
+                            final precio = double.tryParse(value);
+                            if (precio == null || precio <= 0) {
+                              return 'Ingrese un precio válido';
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: 12),
+                        _buildInfoRow(
+                          'Subtotal:',
+                          '\$${subtotal.toStringAsFixed(2)}',
+                          isBold: true,
+                        ),
+                        SizedBox(height: 8),
+                        _buildInfoRow(
+                          'Cantidad restante:',
+                          '${stockTienda.cantidadDisponible - (int.tryParse(cantidadController.text) ?? 0)} ${stock.unidadMedida}',
+                          color: Colors.red,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    final cantidad = int.parse(cantidadController.text);
+                    final precio = double.parse(precioController.text);
+
+                    // Crear item del carrito con todos los campos necesarios
+                    final item = CarritoItem(
+                      id: '${stockTienda.id}_rollo_${DateTime.now().millisecondsSinceEpoch}',
+                      idProducto: stock.id,
+                      nombreProducto: stock.nombre,
+                      idColor: stock.idColor,
+                      nombreColor: stock.colorNombre,
+                      codigoColor: stock.colorCodigo,
+                      precio: precio,
+                      cantidad: cantidad,
+                      tipoVenta: 'UNIDAD_COMPLETA',
+                      idStockTienda:
+                          stockTienda.id, // Guardamos referencia al stock
+                    );
+
+                    // Agregar al carrito (sin vender todavía)
+                    carritoManager.agregarUnidadCompleta(item, stockTienda.id);
+
+                    // Cerrar modal
+                    Navigator.pop(context);
+
+                    // Mostrar mensaje de éxito
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Producto agregado al carrito'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
                   }
-                  final cantidad = int.tryParse(value);
-                  if (cantidad == null || cantidad <= 0) {
-                    return 'Ingrese una cantidad válida';
-                  }
-                  if (cantidad > stockTienda.cantidadDisponible) {
-                    return 'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
-                  }
-                  return null;
                 },
+                child: Text('Agregar al carrito'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
               ),
             ],
-          ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Widget auxiliar para crear tarjetas de información
+  Widget _buildInfoCard({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 8),
+            ...children,
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                final cantidad = int.parse(cantidadController.text);
+      ),
+    );
+  }
 
-                // Vender stock de tienda
-                final resultado = await manager.venderStockTienda(
-                  stockTienda.id,
-                  cantidad,
-                  widget.tienda.id,
-                );
+  // Widget auxiliar para crear tarjetas de entrada
+  Widget _buildInputCard({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 8),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
 
-                if (resultado) {
-                  // Crear item del carrito
-                  final item = CarritoItem(
-                    id: '${stockTienda.id}_rollo',
-                    idProducto: stock.id,
-                    nombreProducto: stock.nombre,
-                    idColor: stock.idColor,
-                    nombreColor: stock.colorNombre,
-                    codigoColor: stock.colorCodigo,
-                    precio: stock.precioVentaMenor,
-                    cantidad: cantidad,
-                    tipoVenta: 'UNIDAD_COMPLETA',
-                  );
-
-                  // Agregar al carrito
-                  carritoManager.agregarUnidadCompleta(item, stockTienda.id);
-
-                  // Cerrar modal
-                  Navigator.pop(context);
-
-                  // Mostrar mensaje de éxito
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Producto agregado al carrito'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  // Mostrar mensaje de error
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${manager.error}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text('Vender'),
+  // Widget auxiliar para filas de información
+  Widget _buildInfoRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    Color? color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[600])),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: color ?? Colors.black,
+            ),
           ),
         ],
       ),

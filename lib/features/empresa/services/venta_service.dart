@@ -1,4 +1,4 @@
-// lib/features/venta/services/venta_service.dart
+// lib/features/empresa/services/venta_service.dart
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -8,11 +8,9 @@ class VentaService {
   late final DatabaseReference _dbRef;
 
   VentaService() {
-    // ✅ Para Web necesitamos especificar la URL completa
     if (kIsWeb) {
       _dbRef = FirebaseDatabase(
-        databaseURL:
-            'https://inventario-de053-default-rtdb.firebaseio.com', // Tu URL de Firebase Realtime Database
+        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
       ).ref('ventas');
     } else {
       _dbRef = FirebaseDatabase.instance.ref('ventas');
@@ -29,61 +27,71 @@ class VentaService {
     final snapshot = await _dbRef
         .orderByChild('idTienda')
         .equalTo(idTienda)
-        .get();
+        .once();
 
-    if (snapshot.exists) {
+    if (snapshot.snapshot.exists) {
       final ventas = <Venta>[];
-      for (var child in snapshot.children) {
-        final venta = Venta.fromJson(
-          Map<String, dynamic>.from(child.value as Map),
-          child.key!,
-        );
-        if (!venta.deleted) ventas.add(venta);
-      }
-      // Ordenar por fecha descendente (similar al original)
+      final data = snapshot.snapshot.value as Map;
+
+      data.forEach((key, value) {
+        // Convertir explícitamente a Map<String, dynamic>
+        final Map<String, dynamic> ventaData = Map<String, dynamic>.from(value);
+        final venta = Venta.fromJson(ventaData, key);
+        if (!venta.deleted) {
+          ventas.add(venta);
+        }
+      });
+
+      // Ordenar por fecha de venta (más reciente primero)
       ventas.sort((a, b) => b.fechaVenta.compareTo(a.fechaVenta));
       return ventas;
     }
     return [];
   }
 
-  Future<Venta?> getVentaById(String id) async {
-    final snapshot = await _dbRef.child(id).get();
-    if (snapshot.exists) {
-      final venta = Venta.fromJson(
-        Map<String, dynamic>.from(snapshot.value as Map),
-        snapshot.key!,
-      );
-      return venta.deleted ? null : venta;
+  Future<bool> updateVenta(Venta venta) async {
+    try {
+      await _dbRef.child(venta.id).update(venta.toJson());
+      return true;
+    } catch (e) {
+      print("Error al actualizar venta: $e");
+      return false;
     }
-    return null;
   }
 
-  Future<void> updateVenta(Venta venta) async {
-    await _dbRef.child(venta.id).update(venta.toJson());
+  Future<bool> deleteVenta(String id) async {
+    try {
+      await _dbRef.child(id).update({
+        'deleted': true,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      return true;
+    } catch (e) {
+      print("Error al eliminar venta: $e");
+      return false;
+    }
   }
 
-  Future<void> deleteVenta(String id) async {
-    await _dbRef.child(id).update({
-      'deleted': true,
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
-  }
-
-  Stream<List<Venta>> ventasStreamByTienda(String idTienda) {
+  Stream<List<Venta>> ventasByTiendaStream(String idTienda) {
     return _dbRef.orderByChild('idTienda').equalTo(idTienda).onValue.map((
       event,
     ) {
       final ventas = <Venta>[];
       if (event.snapshot.exists) {
-        for (var child in event.snapshot.children) {
-          final venta = Venta.fromJson(
-            Map<String, dynamic>.from(child.value as Map),
-            child.key!,
+        final data = event.snapshot.value as Map;
+
+        data.forEach((key, value) {
+          // Convertir explícitamente a Map<String, dynamic>
+          final Map<String, dynamic> ventaData = Map<String, dynamic>.from(
+            value,
           );
-          if (!venta.deleted) ventas.add(venta);
-        }
-        // Ordenar por fecha descendente
+          final venta = Venta.fromJson(ventaData, key);
+          if (!venta.deleted) {
+            ventas.add(venta);
+          }
+        });
+
+        // Ordenar por fecha de venta (más reciente primero)
         ventas.sort((a, b) => b.fechaVenta.compareTo(a.fechaVenta));
       }
       return ventas;

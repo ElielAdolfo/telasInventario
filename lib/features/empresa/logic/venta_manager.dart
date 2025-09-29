@@ -1,10 +1,14 @@
 // lib/features/empresa/logic/venta_manager.dart
+
 import 'package:flutter/material.dart';
-import '../models/venta_model.dart';
+import 'package:inventario/features/empresa/services/stock_tienda_service.dart';
 import '../services/venta_service.dart';
+import '../models/venta_model.dart';
 
 class VentaManager extends ChangeNotifier {
-  final VentaService _service = VentaService();
+  final VentaService _ventaService = VentaService();
+  final StockTiendaService _stockTiendaService = StockTiendaService();
+
   List<Venta> _ventas = [];
   bool _isLoading = false;
   String? _error;
@@ -19,7 +23,7 @@ class VentaManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _ventas = await _service.getVentasByTienda(idTienda);
+      _ventas = await _ventaService.getVentasByTienda(idTienda);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -34,8 +38,43 @@ class VentaManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final id = await _service.createVenta(venta);
-      if (id != null) {
+      // Generar un ID único para la venta
+      final nuevaVenta = Venta(
+        id: '', // El ID será asignado por Firebase
+        idTienda: venta.idTienda,
+        idEmpresa: venta.idEmpresa,
+        fechaVenta: venta.fechaVenta,
+        total: venta.total,
+        realizadoPor: venta.realizadoPor,
+        items: venta.items,
+        deleted: false,
+        updatedAt: DateTime.now().toIso8601String(),
+      );
+
+      // Registrar la venta
+      final idVenta = await _ventaService.createVenta(nuevaVenta);
+
+      if (idVenta.isNotEmpty) {
+        // Actualizar el stock de cada item vendido
+        for (var item in venta.items) {
+          if (item.idStockTienda != null) {
+            // Obtener el stock actual
+            final stockTienda = await _stockTiendaService.getStockById(
+              item.idStockTienda!,
+            );
+
+            if (stockTienda != null) {
+              // Actualizar la cantidad vendida
+              final stockActualizado = stockTienda.copyWith(
+                cantidadVendida: stockTienda.cantidadVendida + item.cantidad,
+              );
+
+              // Guardar los cambios
+              await _stockTiendaService.updateStockTienda(stockActualizado);
+            }
+          }
+        }
+
         // Actualizar la lista de ventas
         await loadVentasByTienda(venta.idTienda);
         return true;

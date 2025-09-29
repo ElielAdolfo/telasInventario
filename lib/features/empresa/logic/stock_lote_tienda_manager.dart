@@ -65,7 +65,7 @@ class StockLoteTiendaManager extends ChangeNotifier {
 
       final loteActualizado = lote.copyWith(
         cantidadVendida: lote.cantidadVendida + 1,
-        cantidadDisponible: lote.cantidadDisponible - 1,
+        // cantidadDisponible: lote.cantidadDisponible - 1,
       );
 
       final resultado = await _service.updateLote(loteActualizado);

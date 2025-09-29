@@ -10,6 +10,7 @@ class CarritoItem {
   final double precio;
   int cantidad;
   double subtotal;
+  final String? idStockTienda;
 
   // Nuevos campos para manejar ambos tipos de venta
   final String tipoVenta; // 'UNIDAD_COMPLETA' o 'UNIDAD_ABIERTA'
@@ -28,6 +29,7 @@ class CarritoItem {
     required this.cantidad,
     required this.tipoVenta,
     this.idStockLoteTienda,
+    this.idStockTienda,
     this.idStockUnidadAbierta,
   }) : subtotal = precio * cantidad;
 

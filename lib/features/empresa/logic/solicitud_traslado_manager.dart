@@ -350,6 +350,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
         colorNombre: solicitud.colorNombre,
         colorCodigo: solicitud.colorCodigo,
         idsLotes: [],
+        cantidadAperturada: 0,
       );
 
       final idStockTienda = await _stockTiendaService.createStockTienda(

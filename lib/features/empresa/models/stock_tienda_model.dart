@@ -8,6 +8,7 @@ class StockTienda {
   final String? idColor;
   final int cantidad;
   final int cantidadVendida;
+  final int cantidadAperturada; // Nuevo campo
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
@@ -32,7 +33,7 @@ class StockTienda {
   final String? colorCodigo;
   final List<String> idsLotes;
 
-  int get cantidadDisponible => cantidad - cantidadVendida;
+  int get cantidadDisponible => cantidad - cantidadAperturada - cantidadVendida;
 
   StockTienda({
     required this.id,
@@ -42,6 +43,7 @@ class StockTienda {
     this.idColor,
     required this.cantidad,
     required this.cantidadVendida,
+    required this.cantidadAperturada, // Nuevo campo
     required this.precioCompra,
     required this.precioVentaMenor,
     required this.precioVentaMayor,
@@ -87,6 +89,7 @@ class StockTienda {
       idColor: json['idColor'],
       cantidad: json['cantidad'] ?? 0,
       cantidadVendida: json['cantidadVendida'] ?? 0,
+      cantidadAperturada: json['cantidadAperturada'] ?? 0, // Nuevo campo
       precioCompra: (json['precioCompra'] ?? 0).toDouble(),
       precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
       precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
@@ -122,6 +125,7 @@ class StockTienda {
       'idColor': idColor,
       'cantidad': cantidad,
       'cantidadVendida': cantidadVendida,
+      'cantidadAperturada': cantidadAperturada, // Nuevo campo
       'precioCompra': precioCompra,
       'precioVentaMenor': precioVentaMenor,
       'precioVentaMayor': precioVentaMayor,
@@ -148,14 +152,22 @@ class StockTienda {
   }
 
   StockTienda copyWith({
+    String? id,
+    String? idEmpresa,
+    String? idTienda,
+    String? idTipoProducto,
+    String? idColor,
     int? cantidad,
     int? cantidadVendida,
+    int? cantidadAperturada, // Nuevo parámetro
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
     DateTime? fechaIngresoStock,
+    String? idSolicitudTraslado,
     bool? deleted,
-    // Campos adicionales copiados de SolicitudTraslado
+    DateTime? createdAt,
+    DateTime? updatedAt,
     String? categoria,
     String? nombre,
     String? unidadMedida,
@@ -171,22 +183,23 @@ class StockTienda {
     List<String>? idsLotes,
   }) {
     return StockTienda(
-      id: id,
-      idTienda: idTienda,
-      idEmpresa: idEmpresa,
-      idTipoProducto: idTipoProducto,
-      idColor: idColor,
+      id: id ?? this.id,
+      idTienda: idTienda ?? this.idTienda,
+      idEmpresa: idEmpresa ?? this.idEmpresa,
+      idTipoProducto: idTipoProducto ?? this.idTipoProducto,
+      idColor: idColor ?? this.idColor,
       cantidad: cantidad ?? this.cantidad,
       cantidadVendida: cantidadVendida ?? this.cantidadVendida,
+      cantidadAperturada:
+          cantidadAperturada ?? this.cantidadAperturada, // Nuevo campo
       precioCompra: precioCompra ?? this.precioCompra,
       precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
       precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
       fechaIngresoStock: fechaIngresoStock ?? this.fechaIngresoStock,
-      idSolicitudTraslado: idSolicitudTraslado,
+      idSolicitudTraslado: idSolicitudTraslado ?? this.idSolicitudTraslado,
       deleted: deleted ?? this.deleted,
-      createdAt: createdAt,
-      updatedAt: DateTime.now(),
-      // Campos adicionales copiados de SolicitudTraslado
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       categoria: categoria ?? this.categoria,
       nombre: nombre ?? this.nombre,
       unidadMedida: unidadMedida ?? this.unidadMedida,
@@ -214,6 +227,7 @@ class StockTienda {
       idColor: '',
       cantidad: 0,
       cantidadVendida: 0,
+      cantidadAperturada: 0, // Nuevo campo
       precioCompra: 0,
       precioVentaMenor: 0,
       precioVentaMayor: 0,
@@ -250,6 +264,7 @@ class StockTienda {
         'categoria: $categoria, '
         'cantidad: $cantidad, '
         'cantidadVendida: $cantidadVendida, '
+        'cantidadAperturada: $cantidadAperturada, '
         'cantidadDisponible: $cantidadDisponible, '
         'precioCompra: $precioCompra, '
         'precioVentaMenor: $precioVentaMenor, '
