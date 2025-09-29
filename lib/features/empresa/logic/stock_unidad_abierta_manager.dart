@@ -137,6 +137,41 @@ class StockUnidadAbiertaManager extends ChangeNotifier {
     }
   }
 
+  // Método para obtener una unidad abierta por su ID
+  Future<StockUnidadAbierta?> getUnidadAbiertaById(String id) async {
+    try {
+      return await _service.getUnidadAbiertaById(id);
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Método para actualizar una unidad abierta
+  Future<bool> actualizarUnidadAbierta(StockUnidadAbierta unidad) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final resultado = await _service.updateUnidadAbierta(unidad);
+      if (resultado) {
+        final index = _unidadesAbiertas.indexWhere((u) => u.id == unidad.id);
+        if (index != -1) {
+          _unidadesAbiertas[index] = unidad;
+        }
+      }
+      return resultado;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Stream<List<StockUnidadAbierta>> unidadesAbiertasByTiendaStream(
     String idTienda,
   ) {

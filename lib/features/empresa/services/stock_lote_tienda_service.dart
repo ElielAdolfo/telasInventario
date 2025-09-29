@@ -2,10 +2,12 @@
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:inventario/features/empresa/services/stock_tienda_service.dart';
 import '../models/stock_lote_tienda_model.dart';
 
 class StockLoteTiendaService {
   late final DatabaseReference _dbRef;
+  final StockTiendaService _stockTiendaService = StockTiendaService();
 
   StockLoteTiendaService() {
     if (kIsWeb) {
@@ -24,40 +26,31 @@ class StockLoteTiendaService {
   }
 
   Future<List<StockLoteTienda>> getLotesByTienda(String idTienda) async {
-    // Primero obtenemos el stock de la tienda para obtener los IDs de los lotes
-    final stockTiendaRef = FirebaseDatabase.instance.ref('stock_tienda');
-    final stockSnapshot = await stockTiendaRef
-        .orderByChild('idTienda')
-        .equalTo(idTienda)
-        .once();
+    // Primero obtenemos los stocks de tienda de la tienda
+    final stocks = await _stockTiendaService.getStockByTienda(idTienda);
 
-    List<String> idsLotes = [];
-    if (stockSnapshot.snapshot.exists) {
-      (stockSnapshot.snapshot.value as Map).forEach((key, value) {
-        final stock = Map<String, dynamic>.from(value);
-        if (stock['idsLotes'] != null) {
-          idsLotes.addAll(List<String>.from(stock['idsLotes']));
-        }
-      });
-    }
+    // Obtenemos todos los IDs de stocks de tienda
+    List<String> idsStockTienda = stocks.map((s) => s.id).toList();
 
-    // Ahora obtenemos los lotes correspondientes a esos IDs
-    if (idsLotes.isEmpty) {
-      return [];
-    }
+    if (idsStockTienda.isEmpty) return [];
 
+    // Ahora obtenemos los lotes correspondientes a esos stocks de tienda
     final lotes = <StockLoteTienda>[];
-    for (String idLote in idsLotes) {
-      final loteSnapshot = await _dbRef.child(idLote).get();
-      if (loteSnapshot.exists) {
+
+    // Obtenemos todos los lotes una sola vez
+    final snapshot = await _dbRef.once();
+
+    if (snapshot.snapshot.exists) {
+      (snapshot.snapshot.value as Map).forEach((key, value) {
         final lote = StockLoteTienda.fromJson(
-          Map<String, dynamic>.from(loteSnapshot.value as Map),
-          loteSnapshot.key!,
+          Map<String, dynamic>.from(value),
+          key,
         );
-        if (!lote.deleted) {
+        // Filtramos los lotes que pertenecen a los stocks de tienda de esta tienda
+        if (!lote.deleted && idsStockTienda.contains(lote.idStockTienda)) {
           lotes.add(lote);
         }
-      }
+      });
     }
 
     return lotes;

@@ -286,7 +286,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
         return false;
       }
 
-      // Actualizar la solicitud
+      // Actualizar la solicitud a APROBADO
       final solicitudActualizada = solicitud.copyWith(
         estado: 'APROBADO',
         aprobadoPor: idAprobador,
@@ -303,7 +303,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
         return false;
       }
 
-      // Mover la cantidad de reservado a aprobado
+      // Actualizar stock empresa
       final stockActualizado = stock.copyWith(
         cantidadReservado:
             stock.cantidadReservado - solicitud.cantidadSolicitada,
@@ -320,24 +320,23 @@ class SolicitudTrasladoManager with ChangeNotifier {
         return false;
       }
 
-      // NUEVO: Crear stock en tienda con los datos copiados de la solicitud
-      final stockTienda = StockTienda(
+      // Crear stock en tienda
+      var stockTienda = StockTienda(
         id: '', // Se generará en la base de datos
         idTienda: solicitud.idTienda,
         idEmpresa: idEmpresa,
-        idTipoProducto: solicitud.idTipoProducto, // De la solicitud
-        idColor: solicitud.idColor, // De la solicitud
+        idTipoProducto: solicitud.idTipoProducto,
+        idColor: solicitud.idColor,
         cantidad: solicitud.cantidadSolicitada,
         cantidadVendida: 0,
-        precioCompra: solicitud.precioCompra, // De la solicitud
-        precioVentaMenor: solicitud.precioVentaMenor, // De la solicitud
-        precioVentaMayor: solicitud.precioVentaMayor, // De la solicitud
+        precioCompra: solicitud.precioCompra,
+        precioVentaMenor: solicitud.precioVentaMenor,
+        precioVentaMayor: solicitud.precioVentaMayor,
         fechaIngresoStock: DateTime.now(),
         idSolicitudTraslado: idSolicitud,
         deleted: false,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        // Campos copiados de la solicitud (que a su vez los copió del StockEmpresa original)
         categoria: solicitud.categoria,
         nombre: solicitud.nombre,
         unidadMedida: solicitud.unidadMedida,
@@ -363,16 +362,15 @@ class SolicitudTrasladoManager with ChangeNotifier {
         return false;
       }
 
-      // Crear el lote con los rollos completos
-      final lote = StockLoteTienda(
+      /*// Crear lote en tienda
+      final lote = StockLoteTienda( 
         id: '',
         idStockTienda: idStockTienda,
         idSolicitudTraslado: idSolicitud,
-        cantidadTotal: solicitud.cantidadSolicitada, // 3 rollos
+        cantidadTotal: solicitud.cantidadSolicitada,
         cantidadVendida: 0,
-        cantidadDisponible:
-            solicitud.cantidadSolicitada, // 3 rollos disponibles
-        cantidadPorUnidad: stock.unidades, // 50 metros por rollo
+        cantidadDisponible: solicitud.cantidadSolicitada,
+        cantidadPorUnidad: stock.unidades,
         unidadesAbiertas: 0,
         deleted: false,
         createdAt: DateTime.now(),
@@ -387,18 +385,9 @@ class SolicitudTrasladoManager with ChangeNotifier {
         return false;
       }
 
-      // Actualizar el stock de tienda con la referencia al lote
-      final stockTiendaActualizado = stockTienda.copyWith(idsLotes: [idLote]);
-
-      final resultadoStockTienda = await _stockTiendaService.createStockTienda(
-        stockTienda,
-      );
-      if (resultadoStockTienda.isEmpty) {
-        _error = 'No se pudo crear el stock en tienda';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
+      // Actualizar stockTienda con el id del lote
+      stockTienda = stockTienda.copyWith(idsLotes: [idLote]);
+      await _stockTiendaService.updateStockTienda(stockTienda);*/
 
       // Registrar movimiento de aprobación
       final movimiento = MovimientoStock(
@@ -419,9 +408,11 @@ class SolicitudTrasladoManager with ChangeNotifier {
         realizadoPor: idAprobador,
       );
 
-      // Aquí debería llamarse al servicio de movimientos para registrar el movimiento
+      // Aquí deberías llamar al servicio para guardar el movimiento
+      // await _movimientoService.crearMovimiento(movimiento);
 
       await loadSolicitudesByEmpresa(idEmpresa);
+
       _isLoading = false;
       notifyListeners();
       return true;

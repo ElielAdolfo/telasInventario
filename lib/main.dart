@@ -8,6 +8,7 @@ import 'package:inventario/features/empresa/logic/stock_empresa_manager.dart';
 import 'package:inventario/features/empresa/logic/tipo_producto_manager.dart';
 import 'package:inventario/features/empresa/logic/unidad_medida_manager.dart';
 import 'package:inventario/features/empresa/logic/venta_manager.dart';
+import 'package:inventario/features/empresa/logic/venta_producto_manager.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'features/empresa/ui/empresa_list_screen.dart';
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MovimientoStockManager()),
         ChangeNotifierProvider(create: (_) => CarritoManager()),
         ChangeNotifierProvider(create: (_) => VentaManager()),
+        ChangeNotifierProvider(create: (_) => VentaProductoManager()),
       ],
       child: MaterialApp(
         title: 'Sistema de Gestión de Empresas',

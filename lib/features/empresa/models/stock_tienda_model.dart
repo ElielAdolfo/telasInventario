@@ -2,8 +2,8 @@
 
 class StockTienda {
   final String id;
-  final String idTienda;
   final String idEmpresa;
+  final String idTienda;
   final String? idTipoProducto;
   final String? idColor;
   final int cantidad;
@@ -236,5 +236,39 @@ class StockTienda {
       colorCodigo: '',
       idsLotes: [],
     );
+  }
+
+  @override
+  String toString() {
+    return 'StockTienda('
+        'id: $id, '
+        'idTienda: $idTienda, '
+        'idEmpresa: $idEmpresa, '
+        'idTipoProducto: $idTipoProducto, '
+        'idColor: $idColor, '
+        'nombre: $nombre, '
+        'categoria: $categoria, '
+        'cantidad: $cantidad, '
+        'cantidadVendida: $cantidadVendida, '
+        'cantidadDisponible: $cantidadDisponible, '
+        'precioCompra: $precioCompra, '
+        'precioVentaMenor: $precioVentaMenor, '
+        'precioVentaMayor: $precioVentaMayor, '
+        'unidadMedida: $unidadMedida, '
+        'unidadMedidaSecundaria: $unidadMedidaSecundaria, '
+        'permiteVentaParcial: $permiteVentaParcial, '
+        'requiereColor: $requiereColor, '
+        'colorNombre: $colorNombre, '
+        'colorCodigo: $colorCodigo, '
+        'cantidadesPosibles: $cantidadesPosibles, '
+        'cantidadPrioritaria: $cantidadPrioritaria, '
+        'lote: $lote, '
+        'fechaIngresoStock: $fechaIngresoStock, '
+        'fechaVencimiento: $fechaVencimiento, '
+        'deleted: $deleted, '
+        'createdAt: $createdAt, '
+        'updatedAt: $updatedAt, '
+        'idsLotes: $idsLotes'
+        ')';
   }
 }

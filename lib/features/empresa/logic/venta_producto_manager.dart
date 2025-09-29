@@ -58,14 +58,6 @@ class VentaProductoManager extends ChangeNotifier {
       _tiposProducto = await _tipoProductoService.getTiposProductoByEmpresa(
         _productosConStock.isNotEmpty ? _productosConStock.first.idEmpresa : '',
       );
-
-      // Cargar lotes de la tienda
-      await _loteManager.cargarLotesPorTienda(tiendaId);
-      _lotesDisponibles = _loteManager.lotes;
-
-      // Cargar unidades abiertas de la tienda
-      await _unidadAbiertaManager.cargarUnidadesAbiertasPorTienda(tiendaId);
-      _unidadesAbiertasDisponibles = _unidadAbiertaManager.unidadesAbiertas;
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -80,27 +72,27 @@ class VentaProductoManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Verificar si el producto requiere color
+      // Buscar el tipo de producto
       final tipoProducto = _tiposProducto.firstWhere(
         (tipo) => tipo.id == producto.idTipoProducto,
         orElse: () => TipoProducto.empty(),
       );
 
+      // Si el tipo requiere color
       if (tipoProducto.requiereColor) {
-        // Cargar todos los colores
-        final todosColores = await _colorService.getColores();
+        // Obtener todos los colores activos
+        final todosColores = (await _colorService.getColores())
+            .where((c) => !c.deleted)
+            .toList();
 
-        if (producto.idColor != null && producto.idColor!.isNotEmpty) {
-          // Filtrar solo el color del producto
-          _coloresDisponibles = todosColores
-              .where((c) => c.id == producto.idColor && !c.deleted)
-              .toList();
-        } else {
-          // Mostrar todos los colores si no hay uno asignado
-          _coloresDisponibles = todosColores.where((c) => !c.deleted).toList();
-        }
+        // Si el producto tiene color asignado -> mostrar solo ese color
+        _coloresDisponibles =
+            (producto.idColor != null && producto.idColor!.isNotEmpty)
+            ? todosColores.where((c) => c.id == producto.idColor).toList()
+            : todosColores;
       }
-      // Si no requiere color, dejamos la lista vacía
+
+      notifyListeners();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -121,8 +113,77 @@ class VentaProductoManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Método para obtener lotes de un producto específico por nombre y color
+  Future<List<StockLoteTienda>> getLotesPorProductoColor(
+    String nombreProducto,
+    String colorNombre,
+  ) async {
+    try {
+      // Filtrar los stocks de tienda que coincidan con el nombre y color
+      final stocksTienda = _productosConStock
+          .where(
+            (s) => s.nombre == nombreProducto && s.colorNombre == colorNombre,
+          )
+          .toList();
+
+      // Obtener los IDs de los stocks de tienda
+      final idsStockTienda = stocksTienda.map((s) => s.id).toList();
+
+      // Filtrar los lotes que pertenezcan a esos stocks de tienda
+      final lotesFiltrados = _lotesDisponibles
+          .where(
+            (lote) =>
+                idsStockTienda.contains(lote.idStockTienda) && !lote.deleted,
+          )
+          .toList();
+
+      return lotesFiltrados;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return [];
+    }
+  }
+
+  // Método para obtener unidades abiertas de un producto específico por nombre y color
+  Future<List<StockUnidadAbierta>> getUnidadesAbiertasPorProductoColor(
+    String nombreProducto,
+    String colorNombre,
+  ) async {
+    try {
+      // Primero obtenemos los lotes del producto
+      final lotes = await getLotesPorProductoColor(nombreProducto, colorNombre);
+
+      // Filtrar las unidades abiertas que pertenezcan a esos lotes
+      final unidadesAbiertasFiltradas = <StockUnidadAbierta>[];
+
+      for (var lote in lotes) {
+        final unidadesDelLote = _unidadesAbiertasDisponibles
+            .where(
+              (u) =>
+                  u.idStockLoteTienda == lote.id &&
+                  !u.estaCerrada &&
+                  !u.deleted,
+            )
+            .toList();
+
+        unidadesAbiertasFiltradas.addAll(unidadesDelLote);
+      }
+
+      return unidadesAbiertasFiltradas;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return [];
+    }
+  }
+
   // Nuevo método para abrir una unidad
-  Future<bool> abrirUnidad(String idLote, String abiertoPor) async {
+  Future<bool> abrirRollo(
+    String idLote,
+    String abiertoPor,
+    String idTienda,
+  ) async {
     try {
       final lote = _lotesDisponibles.firstWhere((l) => l.id == idLote);
 
@@ -161,9 +222,7 @@ class VentaProductoManager extends ChangeNotifier {
 
         if (resultado) {
           // Recargar unidades abiertas
-          await _unidadAbiertaManager.cargarUnidadesAbiertasPorTienda(
-            lote.idStockTienda,
-          );
+          await _unidadAbiertaManager.cargarUnidadesAbiertasPorTienda(idTienda);
           _unidadesAbiertasDisponibles = _unidadAbiertaManager.unidadesAbiertas;
           return true;
         } else {
@@ -173,6 +232,204 @@ class VentaProductoManager extends ChangeNotifier {
         }
       } else {
         _error = 'No se pudo abrir la unidad';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Método para vender un rollo completo
+  Future<bool> venderRollo(String idLote, int cantidad, String idTienda) async {
+    try {
+      // Obtener el lote actualizado desde el servidor
+      final lote = await _loteManager.getLoteById(idLote);
+
+      if (lote == null) {
+        _error = 'No se encontró el lote';
+        notifyListeners();
+        return false;
+      }
+
+      // Verificar si hay suficiente stock
+      if (lote.cantidadDisponible < cantidad) {
+        _error = 'Stock insuficiente';
+        notifyListeners();
+        return false;
+      }
+
+      // Actualizar el lote
+      final loteActualizado = lote.copyWith(
+        cantidadVendida: lote.cantidadVendida + cantidad,
+        cantidadDisponible: lote.cantidadDisponible - cantidad,
+      );
+
+      final resultado = await _loteManager.actualizarLote(loteActualizado);
+
+      if (resultado) {
+        // Recargar lotes
+        await _loteManager.cargarLotesPorTienda(idTienda);
+        _lotesDisponibles = _loteManager.lotes;
+        return true;
+      } else {
+        _error = 'No se pudo actualizar el lote';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Método para vender por metro
+  Future<bool> venderPorMetro(
+    String idUnidadAbierta,
+    int cantidad,
+    String idTienda,
+  ) async {
+    try {
+      // Obtener la unidad abierta actualizada desde el servidor
+      final unidad = await _unidadAbiertaManager.getUnidadAbiertaById(
+        idUnidadAbierta,
+      );
+
+      if (unidad == null) {
+        _error = 'No se encontró la unidad abierta';
+        notifyListeners();
+        return false;
+      }
+
+      // Verificar si hay suficiente stock
+      if (unidad.cantidadDisponible < cantidad) {
+        _error = 'Stock insuficiente';
+        notifyListeners();
+        return false;
+      }
+
+      // Actualizar la unidad abierta
+      final unidadActualizada = unidad.copyWith(
+        cantidadVendida: unidad.cantidadVendida + cantidad,
+        cantidadDisponible: unidad.cantidadDisponible - cantidad,
+      );
+
+      final resultado = await _unidadAbiertaManager.actualizarUnidadAbierta(
+        unidadActualizada,
+      );
+
+      if (resultado) {
+        // Recargar unidades abiertas
+        await _unidadAbiertaManager.cargarUnidadesAbiertasPorTienda(idTienda);
+        _unidadesAbiertasDisponibles = _unidadAbiertaManager.unidadesAbiertas;
+        return true;
+      } else {
+        _error = 'No se pudo actualizar la unidad abierta';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Método para recargar los datos de un producto específico
+  Future<void> recargarDatosProducto(
+    String nombreProducto,
+    String colorNombre,
+  ) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Recargar lotes de la tienda
+      await _loteManager.cargarLotesPorTienda(
+        _productosConStock.first.idTienda,
+      );
+      _lotesDisponibles = _loteManager.lotes;
+
+      // Recargar unidades abiertas de la tienda
+      await _unidadAbiertaManager.cargarUnidadesAbiertasPorTienda(
+        _productosConStock.first.idTienda,
+      );
+      _unidadesAbiertasDisponibles = _unidadAbiertaManager.unidadesAbiertas;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Método para obtener stocks de tienda de un producto específico por nombre y color
+  Future<List<StockTienda>> getStocksTiendaPorProductoColor(
+    String nombreProducto,
+    String colorNombre,
+    String idTienda,
+  ) async {
+    print("datos: " + nombreProducto + " " + colorNombre + " " + idTienda);
+    try {
+      // Filtrar los stocks de tienda que coincidan con el nombre y color
+
+      print(_productosConStock.toString());
+      final stocksTienda = _productosConStock
+          .where(
+            (s) => s.nombre == nombreProducto && s.colorNombre == colorNombre,
+          )
+          .toList();
+
+      return stocksTienda;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return [];
+    }
+  }
+
+  // Método para vender stock de tienda
+  Future<bool> venderStockTienda(
+    String idStockTienda,
+    int cantidad,
+    String idTienda,
+  ) async {
+    try {
+      // Obtener el stock de tienda actualizado desde el servidor
+      final stockTienda = await _stockTiendaService.getStockById(idStockTienda);
+
+      if (stockTienda == null) {
+        _error = 'No se encontró el stock de tienda';
+        notifyListeners();
+        return false;
+      }
+
+      // Verificar si hay suficiente stock
+      if (stockTienda.cantidadDisponible < cantidad) {
+        _error = 'Stock insuficiente';
+        notifyListeners();
+        return false;
+      }
+
+      // Actualizar el stock de tienda
+      final stockTiendaActualizado = stockTienda.copyWith(
+        cantidadVendida: stockTienda.cantidadVendida + cantidad,
+      );
+
+      final resultado = await _stockTiendaService.updateStockTienda(
+        stockTiendaActualizado,
+      );
+
+      if (resultado) {
+        // Recargar stocks de tienda
+        await cargarDatosIniciales(idTienda);
+        return true;
+      } else {
+        _error = 'No se pudo actualizar el stock de tienda';
         notifyListeners();
         return false;
       }

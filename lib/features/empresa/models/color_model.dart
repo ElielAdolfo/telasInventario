@@ -63,4 +63,16 @@ class ColorProducto {
       updatedAt: DateTime.now(),
     );
   }
+
+  @override
+  String toString() {
+    return 'ColorProducto('
+        'id: $id, '
+        'nombreColor: $nombreColor, '
+        'codigoColor: $codigoColor, '
+        'deleted: $deleted, '
+        'createdAt: $createdAt, '
+        'updatedAt: $updatedAt'
+        ')';
+  }
 }

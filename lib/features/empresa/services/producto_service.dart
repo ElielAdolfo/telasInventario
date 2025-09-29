@@ -1,10 +1,21 @@
 // lib/features/producto/services/producto_service.dart
 import 'package:firebase_database/firebase_database.dart';
 import '../models/producto_model.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ProductoService {
   // Referencia a la colección 'productos' en Firebase
-  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref('productos');
+  late final DatabaseReference _dbRef;
+
+  ProductoService() {
+    if (kIsWeb) {
+      _dbRef = FirebaseDatabase(
+        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
+      ).ref('productos');
+    } else {
+      _dbRef = FirebaseDatabase.instance.ref('productos');
+    }
+  }
 
   // Crear un nuevo producto en Firebase
   Future<String> createProducto(Producto producto) async {

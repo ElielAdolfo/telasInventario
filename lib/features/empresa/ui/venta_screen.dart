@@ -1,14 +1,13 @@
 // lib/features/empresa/ui/venta_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/features/empresa/models/carrito_item_model.dart';
 import 'package:provider/provider.dart';
 import '../logic/venta_producto_manager.dart';
 import '../logic/carrito_manager.dart';
 import '../models/stock_tienda_model.dart';
 import '../models/stock_lote_tienda_model.dart';
 import '../models/stock_unidad_abierta_model.dart';
-import '../models/color_model.dart';
-import '../models/carrito_item_model.dart';
 import 'carrito_screen.dart';
 import '../models/tienda_model.dart';
 
@@ -59,21 +58,12 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(appBar: _buildAppBar(context), body: _buildBody(context)),
-    );
+    return Scaffold(appBar: _buildAppBar(context), body: _buildBody(context));
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       title: Text('Ventas - ${widget.tienda.nombre}'),
-      bottom: const TabBar(
-        tabs: [
-          Tab(text: 'Por Unidad'),
-          Tab(text: 'Por Metro'),
-        ],
-      ),
       actions: [_buildCartButton(context)],
     );
   }
@@ -122,12 +112,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
   }
 
   Widget _buildBody(BuildContext context) {
-    return TabBarView(
-      children: [_buildVentaPorUnidad(context), _buildVentaPorMetro(context)],
-    );
-  }
-
-  Widget _buildVentaPorUnidad(BuildContext context) {
     return Consumer<VentaProductoManager>(
       builder: (context, manager, child) {
         if (manager.isLoading) {
@@ -150,58 +134,14 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
               ],
             ),
           );
-        }
-
-        if (manager.productosConStock.isEmpty) {
-          return Center(child: Text('No hay productos disponibles'));
         }
 
         return Column(
           children: [
             _buildProductSelector(context, manager),
             if (manager.productoSeleccionado != null)
-              _buildLotesList(context, manager),
+              _buildStockTiendaList(context, manager),
           ],
-        );
-      },
-    );
-  }
-
-  Widget _buildVentaPorMetro(BuildContext context) {
-    return Consumer<VentaProductoManager>(
-      builder: (context, manager, child) {
-        if (manager.isLoading) {
-          return Center(child: CircularProgressIndicator());
-        }
-
-        if (manager.error != null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Error: ${manager.error}'),
-                SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    manager.cargarDatosIniciales(widget.tienda.id);
-                  },
-                  child: Text('Reintentar'),
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (manager.unidadesAbiertasDisponibles.isEmpty) {
-          return Center(child: Text('No tiene ninguna unidad abierta'));
-        }
-
-        return ListView.builder(
-          itemCount: manager.unidadesAbiertasDisponibles.length,
-          itemBuilder: (context, index) {
-            final unidad = manager.unidadesAbiertasDisponibles[index];
-            return _buildUnidadAbiertaItem(context, manager, unidad);
-          },
         );
       },
     );
@@ -211,6 +151,17 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     BuildContext context,
     VentaProductoManager manager,
   ) {
+    // Obtener productos únicos por nombre
+    final productosUnicos = <String>{};
+    final productosFiltrados = <StockTienda>[];
+
+    for (var producto in manager.productosConStock) {
+      if (!productosUnicos.contains(producto.nombre)) {
+        productosUnicos.add(producto.nombre);
+        productosFiltrados.add(producto);
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: DropdownButtonFormField<StockTienda>(
@@ -219,7 +170,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         ),
-        items: manager.productosConStock.map((producto) {
+        items: productosFiltrados.map((producto) {
           return DropdownMenuItem<StockTienda>(
             value: producto,
             child: Text(producto.nombre),
@@ -234,116 +185,256 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     );
   }
 
-  Widget _buildLotesList(BuildContext context, VentaProductoManager manager) {
-    // Filtrar lotes que pertenezcan al producto seleccionado
-    final lotesDelProducto = manager.lotesDisponibles.where((lote) {
-      final stockTienda = manager.productosConStock.firstWhere(
-        (s) => s.idsLotes.contains(lote.id),
-        orElse: () => StockTienda.empty(),
-      );
-      return stockTienda.idTipoProducto ==
-          manager.productoSeleccionado?.idTipoProducto;
-    }).toList();
+  Widget _buildStockTiendaList(
+    BuildContext context,
+    VentaProductoManager manager,
+  ) {
+    // Filtrar todos los stocks del producto seleccionado
+    final stockDelProducto = manager.productosConStock
+        //.where((s) => s.nombre == manager.productoSeleccionado?.nombre)
+        .toList();
 
-    if (lotesDelProducto.isEmpty) {
-      return Center(child: Text('No hay lotes disponibles para este producto'));
+    if (stockDelProducto.isEmpty) {
+      return Center(child: Text('No hay stock disponible para este producto'));
     }
+
+    // Agrupar stock por color
+    final Map<String, StockTienda> stockAgrupado = {};
+    for (var stock in stockDelProducto) {
+      final key = stock.colorNombre;
+      if (stockAgrupado.containsKey(key)) {
+        final existente = stockAgrupado[key]!;
+        stockAgrupado[key ?? 'Sin Color'] = existente.copyWith(
+          cantidad: existente.cantidad + stock.cantidad,
+          cantidadVendida: existente.cantidadVendida + stock.cantidadVendida,
+          fechaIngresoStock:
+              existente.fechaIngresoStock.isAfter(stock.fechaIngresoStock)
+              ? existente.fechaIngresoStock
+              : stock.fechaIngresoStock,
+        );
+      } else {
+        stockAgrupado[key ?? "Sin Color"] = stock;
+      }
+    }
+
+    final listaAgrupada = stockAgrupado.values.toList();
 
     return Expanded(
       child: ListView.builder(
-        itemCount: lotesDelProducto.length,
+        itemCount: listaAgrupada.length,
         itemBuilder: (context, index) {
-          final lote = lotesDelProducto[index];
-          return _buildLoteItem(context, manager, lote);
+          final stock = listaAgrupada[index];
+
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            elevation: 3,
+            child: ListTile(
+              leading: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: _parseColor(stock.colorCodigo),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey),
+                ),
+              ),
+              title: Text(stock.nombre),
+              subtitle: Text('Color: ${stock.colorNombre}'),
+              trailing: Text(
+                'Disponible1: ${stock.cantidadDisponible} ${stock.unidadMedida}',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              onTap: () => _mostrarModalVenta(context, stock),
+            ),
+          );
         },
       ),
     );
   }
 
-  Widget _buildLoteItem(
-    BuildContext context,
-    VentaProductoManager manager,
-    StockLoteTienda lote,
-  ) {
-    final stockTienda = manager.productosConStock.firstWhere(
-      (s) => s.idsLotes.contains(lote.id),
-      orElse: () => StockTienda.empty(),
-    );
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 3,
-      child: ListTile(
-        leading: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: _parseColor(stockTienda.colorCodigo),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey),
+  void _mostrarModalVenta(BuildContext context, StockTienda stock) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            children: [
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Venta de ${stock.nombre}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              DefaultTabController(
+                length: 2,
+                child: Expanded(
+                  child: Column(
+                    children: [
+                      TabBar(
+                        labelColor: Theme.of(context).primaryColor,
+                        unselectedLabelColor: Colors.grey,
+                        tabs: [
+                          Tab(text: stock.unidadMedidaSecundaria), // METRO
+                          Tab(text: stock.unidadMedida), // ROLLO
+                        ],
+                      ),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            // Contenido para venta por METRO
+                            _buildVentaPorMetro(context, stock),
+                            // Contenido para venta por ROLLO
+                            _buildVentaPorRollo(context, stock),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        title: Text(stockTienda.nombre),
-        subtitle: Text('Color: ${stockTienda.colorNombre}'),
-        trailing: Text(
-          'Disponible: ${lote.cantidadDisponible} ${stockTienda.unidadMedida}',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        onTap: () =>
-            _mostrarDialogoCantidad(context, manager, lote, stockTienda),
-      ),
-    );
-  }
-
-  Widget _buildUnidadAbiertaItem(
-    BuildContext context,
-    VentaProductoManager manager,
-    StockUnidadAbierta unidad,
-  ) {
-    final lote = manager.lotesDisponibles.firstWhere(
-      (l) => l.id == unidad.idStockLoteTienda,
-      orElse: () => StockLoteTienda.empty(),
-    );
-
-    final stockTienda = manager.productosConStock.firstWhere(
-      (s) => s.idsLotes.contains(lote.id),
-      orElse: () => StockTienda.empty(),
-    );
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 3,
-      child: ListTile(
-        leading: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: _parseColor(stockTienda.colorCodigo),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey),
-          ),
-        ),
-        title: Text(stockTienda.nombre),
-        subtitle: Text('Color: ${stockTienda.colorNombre}'),
-        trailing: Text(
-          'Disponible: ${unidad.cantidadDisponible} ${stockTienda.unidadMedidaSecundaria}',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        onTap: () => _mostrarDialogoCantidadPorMetro(
-          context,
-          manager,
-          unidad,
-          stockTienda,
         ),
       ),
     );
   }
 
-  void _mostrarDialogoCantidad(
+  Widget _buildVentaPorMetro(BuildContext context, StockTienda stock) {
+    return Container(); //no desarrolar aun primero se necesita el por rollo
+  }
+
+  Future<List<StockTienda>> _cargarStocksActualizados(
+    String nombreProducto,
+    String colorNombre,
+    String idTienda,
+  ) async {
+    final manager = context.read<VentaProductoManager>();
+
+    // 1. Cargar los datos iniciales primero
+    await manager.cargarDatosIniciales(idTienda);
+
+    // 2. Filtrar por producto y color
+    return manager.getStocksTiendaPorProductoColor(
+      nombreProducto,
+      colorNombre,
+      idTienda,
+    );
+  }
+
+  Widget _buildVentaPorRollo(BuildContext context, StockTienda stock) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<VentaProductoManager>().cargarDatosIniciales(
+        widget.tienda.id,
+      );
+    });
+    return Consumer<VentaProductoManager>(
+      builder: (context, manager, child) {
+        // Antes de construir la UI, cargamos los datos
+        return FutureBuilder<List<StockTienda>>(
+          future: manager.getStocksTiendaPorProductoColor(
+            stock.nombre,
+            stock.colorNombre ?? '',
+            widget.tienda.id,
+          ),
+          builder: (context, snapshot) {
+            // 1. Mostrar loading mientras se cargan los datos
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            // 2. Mostrar error si ocurre alguno
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+
+            // 3. Cuando los datos ya están cargados
+            final stocksTienda = snapshot.data ?? [];
+
+            // Filtrar stocks con cantidad disponible
+            final stocksDisponibles = stocksTienda
+                .where((s) => s.cantidadDisponible > 0)
+                .toList();
+
+            if (stocksDisponibles.isEmpty) {
+              return Center(
+                child: Text(
+                  'No hay ${stock.unidadMedida.toLowerCase()}s disponibles de ${stock.nombre} color ${stock.colorNombre}',
+                ),
+              );
+            }
+
+            // 4. Construir la lista de stocks
+            return ListView.builder(
+              itemCount: stocksDisponibles.length,
+              itemBuilder: (context, index) {
+                final stockTienda = stocksDisponibles[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  elevation: 3,
+                  child: ListTile(
+                    leading: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: _parseColor(stockTienda.colorCodigo),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey),
+                      ),
+                    ),
+                    title: Text(stockTienda.nombre),
+                    subtitle: Text('Color: ${stockTienda.colorNombre}'),
+                    trailing: Text(
+                      'Disponible: ${stockTienda.cantidadDisponible} ${stockTienda.unidadMedida}',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onTap: () => _mostrarDialogoVentaPorRollo(
+                      context,
+                      manager,
+                      stockTienda,
+                      stock,
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _mostrarDialogoVentaPorRollo(
     BuildContext context,
     VentaProductoManager manager,
-    StockLoteTienda lote,
     StockTienda stockTienda,
+    StockTienda stock,
   ) {
     final carritoManager = Provider.of<CarritoManager>(context, listen: false);
     final TextEditingController cantidadController = TextEditingController(
@@ -354,19 +445,22 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Agregar al carrito'),
+        title: Text('Vender por ${stock.unidadMedida}'),
         content: Form(
           key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Producto: ${stockTienda.nombre}'),
-              Text('Color: ${stockTienda.colorNombre}'),
+              Text('Producto: ${stock.nombre}'),
+              Text('Color: ${stock.colorNombre}'),
+              Text(
+                'Disponible6: ${stockTienda.cantidadDisponible} ${stock.unidadMedida}',
+              ),
               SizedBox(height: 16),
               TextFormField(
                 controller: cantidadController,
                 decoration: InputDecoration(
-                  labelText: 'Cantidad (${stockTienda.unidadMedida})',
+                  labelText: 'Cantidad (${stock.unidadMedida})',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
@@ -378,8 +472,8 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                   if (cantidad == null || cantidad <= 0) {
                     return 'Ingrese una cantidad válida';
                   }
-                  if (cantidad > lote.cantidadDisponible) {
-                    return 'Stock insuficiente. Disponible: ${lote.cantidadDisponible}';
+                  if (cantidad > stockTienda.cantidadDisponible) {
+                    return 'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
                   }
                   return null;
                 },
@@ -393,138 +487,56 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
             child: Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               if (formKey.currentState!.validate()) {
                 final cantidad = int.parse(cantidadController.text);
 
-                // Crear item del carrito
-                final item = CarritoItem(
-                  id: '${lote.id}_completa',
-                  idProducto: stockTienda.id,
-                  nombreProducto: stockTienda.nombre,
-                  idColor: stockTienda.idColor,
-                  nombreColor: stockTienda.colorNombre,
-                  codigoColor: stockTienda.colorCodigo,
-                  precio: stockTienda.precioVentaMenor,
-                  cantidad: cantidad,
-                  tipoVenta: 'UNIDAD_COMPLETA',
-                  idStockLoteTienda: lote.id,
+                // Vender stock de tienda
+                final resultado = await manager.venderStockTienda(
+                  stockTienda.id,
+                  cantidad,
+                  widget.tienda.id,
                 );
 
-                // Agregar al carrito
-                carritoManager.agregarUnidadCompleta(item, lote.id);
+                if (resultado) {
+                  // Crear item del carrito
+                  final item = CarritoItem(
+                    id: '${stockTienda.id}_rollo',
+                    idProducto: stock.id,
+                    nombreProducto: stock.nombre,
+                    idColor: stock.idColor,
+                    nombreColor: stock.colorNombre,
+                    codigoColor: stock.colorCodigo,
+                    precio: stock.precioVentaMenor,
+                    cantidad: cantidad,
+                    tipoVenta: 'UNIDAD_COMPLETA',
+                  );
 
-                // Cerrar modal
-                Navigator.pop(context);
+                  // Agregar al carrito
+                  carritoManager.agregarUnidadCompleta(item, stockTienda.id);
 
-                // Mostrar mensaje de éxito
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Producto agregado al carrito'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                  // Cerrar modal
+                  Navigator.pop(context);
+
+                  // Mostrar mensaje de éxito
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Producto agregado al carrito'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  // Mostrar mensaje de error
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${manager.error}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
-            child: Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _mostrarDialogoCantidadPorMetro(
-    BuildContext context,
-    VentaProductoManager manager,
-    StockUnidadAbierta unidad,
-    StockTienda stockTienda,
-  ) {
-    final carritoManager = Provider.of<CarritoManager>(context, listen: false);
-    final TextEditingController cantidadController = TextEditingController(
-      text: '1',
-    );
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Agregar al carrito'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Producto: ${stockTienda.nombre}'),
-              Text('Color: ${stockTienda.colorNombre}'),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: cantidadController,
-                decoration: InputDecoration(
-                  labelText: 'Cantidad (${stockTienda.unidadMedidaSecundaria})',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ingrese una cantidad';
-                  }
-                  final cantidad = int.tryParse(value);
-                  if (cantidad == null || cantidad <= 0) {
-                    return 'Ingrese una cantidad válida';
-                  }
-                  if (cantidad > unidad.cantidadDisponible) {
-                    return 'Stock insuficiente. Disponible: ${unidad.cantidadDisponible}';
-                  }
-                  // Validar que la cantidad esté entre las cantidades posibles
-                  if (!stockTienda.cantidadesPosibles.contains(cantidad)) {
-                    return 'La cantidad debe ser una de las siguientes: ${stockTienda.cantidadesPosibles.join(", ")}';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                final cantidad = int.parse(cantidadController.text);
-
-                // Crear item del carrito
-                final item = CarritoItem(
-                  id: '${unidad.id}_metro',
-                  idProducto: stockTienda.id,
-                  nombreProducto: stockTienda.nombre,
-                  idColor: stockTienda.idColor,
-                  nombreColor: stockTienda.colorNombre,
-                  codigoColor: stockTienda.colorCodigo,
-                  precio: stockTienda.precioVentaMenor,
-                  cantidad: cantidad,
-                  tipoVenta: 'UNIDAD_ABIERTA',
-                  idStockUnidadAbierta: unidad.id,
-                );
-
-                // Agregar al carrito
-                carritoManager.agregarPorMetro(item, unidad.id);
-
-                // Cerrar modal
-                Navigator.pop(context);
-
-                // Mostrar mensaje de éxito
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Producto agregado al carrito'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            child: Text('Agregar'),
+            child: Text('Vender'),
           ),
         ],
       ),

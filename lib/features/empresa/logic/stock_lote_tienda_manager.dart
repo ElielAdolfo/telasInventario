@@ -87,6 +87,18 @@ class StockLoteTiendaManager extends ChangeNotifier {
     }
   }
 
+  // Método para obtener un lote por su ID
+  Future<StockLoteTienda?> getLoteById(String id) async {
+    try {
+      return await _service.getLoteById(id);
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Método para actualizar un lote
   Future<bool> actualizarLote(StockLoteTienda lote) async {
     _isLoading = true;
     _error = null;
