@@ -191,7 +191,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
   ) {
     // Filtrar todos los stocks del producto seleccionado
     final stockDelProducto = manager.productosConStock
-        //.where((s) => s.nombre == manager.productoSeleccionado?.nombre)
+        .where((s) => s.nombre == manager.productoSeleccionado?.nombre)
         .toList();
 
     if (stockDelProducto.isEmpty) {
@@ -253,73 +253,86 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
   }
 
   void _mostrarModalVenta(BuildContext context, StockTienda stock) {
+    final TabController tabController = TabController(
+      length: 2,
+      vsync: Scaffold.of(context),
+    );
+
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.8,
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: Column(
-            children: [
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
+      builder: (context) {
+        return Dialog(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      topRight: Radius.circular(8),
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Venta de ${stock.nombre}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              DefaultTabController(
-                length: 2,
-                child: Expanded(
-                  child: Column(
+                  child: Row(
                     children: [
-                      TabBar(
-                        labelColor: Theme.of(context).primaryColor,
-                        unselectedLabelColor: Colors.grey,
-                        tabs: [
-                          Tab(text: stock.unidadMedidaSecundaria), // METRO
-                          Tab(text: stock.unidadMedida), // ROLLO
-                        ],
-                      ),
                       Expanded(
-                        child: TabBarView(
-                          children: [
-                            // Contenido para venta por METRO
-                            _buildVentaPorMetro(context, stock),
-                            // Contenido para venta por ROLLO
-                            _buildVentaPorRollo(context, stock),
-                          ],
+                        child: Text(
+                          'Venta de ${stock.nombre}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+                DefaultTabController(
+                  length: 2,
+                  initialIndex: 0,
+                  child: Expanded(
+                    child: Column(
+                      children: [
+                        TabBar(
+                          controller: tabController,
+                          labelColor: Theme.of(context).primaryColor,
+                          unselectedLabelColor: Colors.grey,
+                          tabs: [
+                            Tab(text: stock.unidadMedidaSecundaria), // METRO
+                            Tab(text: stock.unidadMedida), // ROLLO
+                          ],
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            controller: tabController,
+                            children: [
+                              _buildVentaPorMetro(context, stock),
+                              _buildVentaPorRollo(
+                                context,
+                                stock,
+                                tabController,
+                                1,
+                              ), // Pasamos tabController y el índice
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -327,54 +340,52 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     return Container(); //no desarrolar aun primero se necesita el por rollo
   }
 
-  Future<List<StockTienda>> _cargarStocksActualizados(
-    String nombreProducto,
-    String colorNombre,
-    String idTienda,
-  ) async {
+  Widget _buildVentaPorRollo(
+    BuildContext context,
+    StockTienda stock,
+    TabController tabController,
+    int tabIndex,
+  ) {
     final manager = context.read<VentaProductoManager>();
+    Future<List<StockTienda>>? futureStocks;
 
-    // 1. Cargar los datos iniciales primero
-    await manager.cargarDatosIniciales(idTienda);
+    void cargar() {
+      futureStocks = _cargarStocks(manager, stock);
+    }
 
-    // 2. Filtrar por producto y color
-    return manager.getStocksTiendaPorProductoColor(
-      nombreProducto,
-      colorNombre,
-      idTienda,
-    );
-  }
-
-  Widget _buildVentaPorRollo(BuildContext context, StockTienda stock) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<VentaProductoManager>().cargarDatosIniciales(
-        widget.tienda.id,
-      );
+    // Escuchar cuando el tab cambia
+    tabController.addListener(() {
+      if (tabController.index == tabIndex) {
+        cargar();
+      }
     });
-    return Consumer<VentaProductoManager>(
-      builder: (context, manager, child) {
-        // Antes de construir la UI, cargamos los datos
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        // Si es la primera vez, cargar
+        if (futureStocks == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            cargar();
+            setState(() {});
+          });
+        }
+
+        if (futureStocks == null) {
+          return Center(child: CircularProgressIndicator());
+        }
+
         return FutureBuilder<List<StockTienda>>(
-          future: manager.getStocksTiendaPorProductoColor(
-            stock.nombre,
-            stock.colorNombre ?? '',
-            widget.tienda.id,
-          ),
+          future: futureStocks,
           builder: (context, snapshot) {
-            // 1. Mostrar loading mientras se cargan los datos
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());
             }
 
-            // 2. Mostrar error si ocurre alguno
             if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
             }
 
-            // 3. Cuando los datos ya están cargados
             final stocksTienda = snapshot.data ?? [];
-
-            // Filtrar stocks con cantidad disponible
             final stocksDisponibles = stocksTienda
                 .where((s) => s.cantidadDisponible > 0)
                 .toList();
@@ -387,7 +398,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
               );
             }
 
-            // 4. Construir la lista de stocks
             return ListView.builder(
               itemCount: stocksDisponibles.length,
               itemBuilder: (context, index) {
@@ -411,7 +421,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     title: Text(stockTienda.nombre),
                     subtitle: Text('Color: ${stockTienda.colorNombre}'),
                     trailing: Text(
-                      'Disponible: ${stockTienda.cantidadDisponible} ${stockTienda.unidadMedida}',
+                      'Disponible8: ${stockTienda.cantidadDisponible} ${stockTienda.unidadMedida}',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     onTap: () => _mostrarDialogoVentaPorRollo(
@@ -427,6 +437,18 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
           },
         );
       },
+    );
+  }
+
+  Future<List<StockTienda>> _cargarStocks(
+    VentaProductoManager manager,
+    StockTienda stock,
+  ) async {
+    await manager.cargarDatosIniciales(widget.tienda.id);
+    return manager.getStocksTiendaPorProductoColor(
+      stock.nombre,
+      stock.colorNombre ?? '',
+      widget.tienda.id,
     );
   }
 
