@@ -5,6 +5,7 @@ import 'package:inventario/features/empresa/logic/carrito_manager.dart';
 import 'package:inventario/features/empresa/logic/venta_manager.dart';
 import 'package:inventario/features/empresa/models/carrito_item_model.dart';
 import 'package:inventario/features/empresa/models/tienda_model.dart';
+import 'package:inventario/features/empresa/models/venta_item_model.dart';
 import 'package:provider/provider.dart';
 import '../models/venta_model.dart';
 
@@ -63,6 +64,16 @@ class _CarritoScreenState extends State<CarritoScreen>
   Widget _buildCarritoTab() {
     return Consumer<CarritoManager>(
       builder: (context, carritoManager, child) {
+        // Imprimir los items del carrito para debug
+        if (carritoManager.items.isNotEmpty) {
+          print("Items del carrito (${carritoManager.items.length}):");
+          for (var item in carritoManager.items) {
+            print("Producto: ${item.toString()}");
+          }
+        } else {
+          print("El carrito está vacío");
+        }
+
         if (carritoManager.items.isEmpty) {
           return const Center(
             child: Column(
@@ -350,6 +361,7 @@ class _CarritoScreenState extends State<CarritoScreen>
               tipoVenta: item.tipoVenta,
               idStockTienda: item.idStockTienda,
               idStockUnidadAbierta: item.idStockUnidadAbierta,
+              idStockLoteTienda: item.idStockLoteTienda,
             ),
           )
           .toList(),

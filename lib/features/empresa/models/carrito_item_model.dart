@@ -67,4 +67,24 @@ class CarritoItem {
       idStockUnidadAbierta: idStockUnidadAbierta ?? this.idStockUnidadAbierta,
     );
   }
+
+  // Método toString para depuración
+  @override
+  String toString() {
+    return 'CarritoItem('
+        'id: $id, '
+        'idProducto: $idProducto, '
+        'nombreProducto: $nombreProducto, '
+        'idColor: $idColor, '
+        'nombreColor: $nombreColor, '
+        'codigoColor: $codigoColor, '
+        'precio: $precio, '
+        'cantidad: $cantidad, '
+        'subtotal: $subtotal, '
+        'tipoVenta: $tipoVenta, '
+        'idStockTienda: $idStockTienda, '
+        'idStockLoteTienda: $idStockLoteTienda, '
+        'idStockUnidadAbierta: $idStockUnidadAbierta'
+        ')';
+  }
 }

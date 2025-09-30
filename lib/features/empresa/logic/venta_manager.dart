@@ -57,7 +57,8 @@ class VentaManager extends ChangeNotifier {
       if (idVenta.isNotEmpty) {
         // Actualizar el stock de cada item vendido
         for (var item in venta.items) {
-          if (item.idStockTienda != null) {
+          if (item.tipoVenta == 'UNIDAD_COMPLETA' &&
+              item.idStockTienda != null) {
             // Obtener el stock actual
             final stockTienda = await _stockTiendaService.getStockById(
               item.idStockTienda!,
@@ -71,6 +72,23 @@ class VentaManager extends ChangeNotifier {
 
               // Guardar los cambios
               await _stockTiendaService.updateStockTienda(stockActualizado);
+            }
+          } else if (item.tipoVenta == 'UNIDAD_ABIERTA' &&
+              item.idStockUnidadAbierta != null) {
+            // Obtener el stock de lote actual
+            final stockLoteTienda = await _stockTiendaService.getStockLoteById(
+              item.idStockUnidadAbierta!,
+            );
+
+            if (stockLoteTienda != null) {
+              // Actualizar la cantidad vendida en el lote
+              final loteActualizado = stockLoteTienda.copyWith(
+                cantidadVendida:
+                    stockLoteTienda.cantidadVendida + item.cantidad,
+              );
+
+              // Guardar los cambios
+              await _stockTiendaService.updateStockLoteTienda(loteActualizado);
             }
           }
         }
