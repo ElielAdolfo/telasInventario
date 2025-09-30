@@ -134,15 +134,20 @@ class VentaProductoManager extends ChangeNotifier {
       // Obtener los IDs de los stocks de tienda
       final idsStockTienda = stocksTienda.map((s) => s.id).toList();
 
-      // Filtrar los lotes que pertenezcan a esos stocks de tienda
-      final lotesFiltrados = _lotesDisponibles
-          .where(
-            (lote) =>
-                idsStockTienda.contains(lote.idStockTienda) && !lote.deleted,
-          )
-          .toList();
+      // Obtener todos los lotes disponibles
+      final List<StockLoteTienda> todosLotes = [];
 
-      return lotesFiltrados;
+      for (String idStockTienda in idsStockTienda) {
+        final lotes = await _stockLoteTiendaService.getLotesByStockTienda(
+          idStockTienda,
+        );
+        todosLotes.addAll(lotes);
+      }
+
+      // Filtrar los lotes que estén abiertos y tengan stock disponible
+      return todosLotes
+          .where((lote) => !lote.estaCerrada && lote.cantidadDisponible > 0)
+          .toList();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -390,6 +395,83 @@ class VentaProductoManager extends ChangeNotifier {
 
       if (resultado) {
         // Recargar stocks de tienda
+        await cargarDatosIniciales(idTienda);
+        return true;
+      } else {
+        _error = 'No se pudo actualizar el stock de tienda';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> abrirUnidad(
+    String idStockTienda,
+    int cantidadUnidades,
+    String abiertoPor,
+    String idTienda,
+  ) async {
+    try {
+      // Obtener el stock de tienda actualizado
+      final stockTienda = await _stockTiendaService.getStockById(idStockTienda);
+
+      if (stockTienda == null) {
+        _error = 'No se encontró el stock de tienda';
+        notifyListeners();
+        return false;
+      }
+
+      // Verificar si hay stock disponible para abrir
+      if (stockTienda.cantidadDisponible < cantidadUnidades) {
+        _error =
+            'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
+        notifyListeners();
+        return false;
+      }
+
+      // Crear un nuevo lote para cada unidad abierta
+      for (int i = 0; i < cantidadUnidades; i++) {
+        // Calcular la cantidad en unidad secundaria (ej: metros por rollo)
+        final cantidadUnidadSecundaria = stockTienda.cantidadPrioritaria;
+
+        final nuevoLote = StockLoteTienda(
+          id: '', // El ID será generado por Firebase
+          idStockTienda: idStockTienda,
+          cantidad: cantidadUnidadSecundaria,
+          cantidadVendida: 0,
+          fechaApertura: DateTime.now(),
+          abiertoPor: abiertoPor,
+          estaCerrada: false,
+          deleted: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        // Registrar el nuevo lote
+        final idLote = await _stockLoteTiendaService.createLote(nuevoLote);
+
+        if (idLote.isEmpty) {
+          _error = 'No se pudo crear el lote';
+          notifyListeners();
+          return false;
+        }
+      }
+
+      // Actualizar el stock de tienda
+      final stockActualizado = stockTienda.copyWith(
+        cantidadAperturada: stockTienda.cantidadAperturada + cantidadUnidades,
+      );
+
+      final resultado = await _stockTiendaService.updateStockTienda(
+        stockActualizado,
+      );
+
+      if (resultado) {
+        // Recargar datos
         await cargarDatosIniciales(idTienda);
         return true;
       } else {

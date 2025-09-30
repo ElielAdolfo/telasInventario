@@ -2,12 +2,10 @@
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:inventario/features/empresa/services/stock_tienda_service.dart';
 import '../models/stock_lote_tienda_model.dart';
 
 class StockLoteTiendaService {
   late final DatabaseReference _dbRef;
-  final StockTiendaService _stockTiendaService = StockTiendaService();
 
   StockLoteTiendaService() {
     if (kIsWeb) {
@@ -25,35 +23,28 @@ class StockLoteTiendaService {
     return newRef.key!;
   }
 
-  Future<List<StockLoteTienda>> getLotesByTienda(String idTienda) async {
-    // Primero obtenemos los stocks de tienda de la tienda
-    final stocks = await _stockTiendaService.getStockByTienda(idTienda);
-
-    // Obtenemos todos los IDs de stocks de tienda
-    List<String> idsStockTienda = stocks.map((s) => s.id).toList();
-
-    if (idsStockTienda.isEmpty) return [];
-
-    // Ahora obtenemos los lotes correspondientes a esos stocks de tienda
-    final lotes = <StockLoteTienda>[];
-
-    // Obtenemos todos los lotes una sola vez
-    final snapshot = await _dbRef.once();
+  Future<List<StockLoteTienda>> getLotesByStockTienda(
+    String idStockTienda,
+  ) async {
+    final snapshot = await _dbRef
+        .orderByChild('idStockTienda')
+        .equalTo(idStockTienda)
+        .once();
 
     if (snapshot.snapshot.exists) {
+      final lotes = <StockLoteTienda>[];
       (snapshot.snapshot.value as Map).forEach((key, value) {
         final lote = StockLoteTienda.fromJson(
           Map<String, dynamic>.from(value),
           key,
         );
-        // Filtramos los lotes que pertenecen a los stocks de tienda de esta tienda
-        if (!lote.deleted && idsStockTienda.contains(lote.idStockTienda)) {
+        if (!lote.deleted) {
           lotes.add(lote);
         }
       });
+      return lotes;
     }
-
-    return lotes;
+    return [];
   }
 
   Future<StockLoteTienda?> getLoteById(String id) async {
@@ -90,22 +81,25 @@ class StockLoteTiendaService {
     }
   }
 
-  Stream<List<StockLoteTienda>> lotesByTiendaStream(String idTienda) {
-    return _dbRef.onValue.map((event) {
-      final lotes = <StockLoteTienda>[];
-      if (event.snapshot.exists) {
-        (event.snapshot.value as Map).forEach((key, value) {
-          final lote = StockLoteTienda.fromJson(
-            Map<String, dynamic>.from(value),
-            key,
-          );
-          // Filtrar solo los no eliminados y que pertenezcan a la tienda
-          if (!lote.deleted) {
-            lotes.add(lote);
+  Stream<List<StockLoteTienda>> lotesByStockTiendaStream(String idStockTienda) {
+    return _dbRef
+        .orderByChild('idStockTienda')
+        .equalTo(idStockTienda)
+        .onValue
+        .map((event) {
+          final lotes = <StockLoteTienda>[];
+          if (event.snapshot.exists) {
+            (event.snapshot.value as Map).forEach((key, value) {
+              final lote = StockLoteTienda.fromJson(
+                Map<String, dynamic>.from(value),
+                key,
+              );
+              if (!lote.deleted) {
+                lotes.add(lote);
+              }
+            });
           }
+          return lotes;
         });
-      }
-      return lotes;
-    });
   }
 }
