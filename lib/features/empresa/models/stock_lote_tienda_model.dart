@@ -95,4 +95,23 @@ class StockLoteTienda {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  @override
+  String toString() {
+    return 'StockLoteTienda('
+        'id: $id, '
+        'idStockTienda: $idStockTienda, '
+        'cantidad: $cantidad, '
+        'cantidadVendida: $cantidadVendida, '
+        'cantidadDisponible: $cantidadDisponible, '
+        'fechaApertura: $fechaApertura, '
+        'abiertoPor: $abiertoPor, '
+        'estaCerrada: $estaCerrada, '
+        'fechaCierre: $fechaCierre, '
+        'cerradoPor: $cerradoPor, '
+        'deleted: $deleted, '
+        'createdAt: $createdAt, '
+        'updatedAt: $updatedAt'
+        ')';
+  }
 }

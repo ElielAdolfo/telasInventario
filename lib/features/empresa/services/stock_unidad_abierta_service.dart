@@ -29,9 +29,9 @@ class StockUnidadAbiertaService {
   ) async {
     // Primero obtenemos los lotes de la tienda
     final stockLoteTiendaService = StockLoteTiendaService();
-    final lotes = await stockLoteTiendaService.getLotesByTienda(idTienda);
+    //final lotes = await stockLoteTiendaService.getLotesByTienda(idTienda);
 
-    List<String> idsLotes = lotes.map((lote) => lote.id).toList();
+    List<String> idsLotes = []; //lotes.map((lote) => lote.id).toList();
 
     // Ahora obtenemos las unidades abiertas correspondientes a esos lotes
     if (idsLotes.isEmpty) {

@@ -253,6 +253,13 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
   }
 
   void _mostrarModalVenta(BuildContext context, StockTienda stock) {
+    final manager = context.read<VentaProductoManager>();
+    final futureLotes = manager.getLotesPorProductoColor(
+      stock.nombre,
+      stock.colorNombre ?? '',
+      widget.tienda.id,
+    );
+
     final TabController tabController = TabController(
       length: 2,
       vsync: Scaffold.of(context),
@@ -311,17 +318,34 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                           ],
                         ),
                         Expanded(
-                          child: TabBarView(
-                            controller: tabController,
-                            children: [
-                              _buildVentaPorMetro(context, stock),
-                              _buildVentaPorRollo(
-                                context,
-                                stock,
-                                tabController,
-                                1,
-                              ), // Pasamos tabController y el índice
-                            ],
+                          child: FutureBuilder<List<StockLoteTienda>>(
+                            future: futureLotes,
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              // ✅ Pasamos los datos ya listos
+                              return TabBarView(
+                                controller: tabController,
+                                children: [
+                                  _buildVentaPorMetro(
+                                    context,
+                                    stock,
+                                    tabController,
+                                    0,
+                                  ),
+                                  _buildVentaPorRollo(
+                                    context,
+                                    stock,
+                                    tabController,
+                                    1,
+                                  ), // Pasamos tabController y el índice
+                                ],
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -336,71 +360,112 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     );
   }
 
-  Widget _buildVentaPorMetro(BuildContext context, StockTienda stock) {
+  Widget _buildVentaPorMetro(
+    BuildContext context,
+    StockTienda stock,
+    TabController tabController,
+    int tabIndex,
+  ) {
     final manager = context.read<VentaProductoManager>();
+    Future<List<StockLoteTienda>>? futureLotes;
 
-    return FutureBuilder<List<StockLoteTienda>>(
-      future: manager.getLotesPorProductoColor(
+    void cargar() {
+      futureLotes = manager.getLotesPorProductoColor(
         stock.nombre,
         stock.colorNombre ?? '',
-      ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+        widget.tienda.id,
+      );
+      print("entro a cargar datos");
+    }
+
+    // ✅ Se carga inmediatamente si el tab inicial es el mismo
+    if (tabController.index == tabIndex && futureLotes == null) {
+      cargar();
+    }
+
+    // ✅ Detecta cuando se cambia a este tab
+    tabController.addListener(() {
+      if (tabController.index == tabIndex) {
+        cargar();
+      }
+    });
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        if (futureLotes == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            cargar();
+            setState(() {});
+          });
         }
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
+        return FutureBuilder<List<StockLoteTienda>>(
+          future: futureLotes,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        final lotes = snapshot.data ?? [];
-        final lotesDisponibles = lotes
-            .where((lote) => lote.cantidadDisponible > 0)
-            .toList();
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
 
-        if (lotesDisponibles.isEmpty) {
-          return Center(
-            child: Text(
-              'No hay ${stock.unidadMedidaSecundaria?.toLowerCase() ?? 'unidad'}s abiertos de ${stock.nombre} color ${stock.colorNombre}',
-            ),
-          );
-        }
+            final lotes = snapshot.data ?? [];
+            final lotesDisponibles = lotes
+                .where((lote) => lote.cantidadDisponible > 0)
+                .toList();
 
-        return ListView.builder(
-          itemCount: lotesDisponibles.length,
-          itemBuilder: (context, index) {
-            final lote = lotesDisponibles[index];
+            if (lotesDisponibles.isEmpty) {
+              return Center(
+                child: Text(
+                  'No hay ${stock.unidadMedidaSecundaria?.toLowerCase() ?? 'unidad'}s abiertos de ${stock.nombre} color ${stock.colorNombre}',
+                ),
+              );
+            }
 
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              elevation: 2,
-              child: ListTile(
-                leading: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: _parseColor(stock.colorCodigo),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey),
+            return ListView.builder(
+              itemCount: lotesDisponibles.length,
+              itemBuilder: (context, index) {
+                final lote = lotesDisponibles[index];
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
                   ),
-                ),
-                title: Text('${stock.nombre} - ${stock.colorNombre}'),
-                subtitle: Text(
-                  'Disponible: ${lote.cantidadDisponible} ${stock.unidadMedidaSecundaria}\n'
-                  'Apertura: ${lote.fechaApertura.toLocal().toString().split(" ")[0]}',
-                ),
-                isThreeLine: true,
-                trailing: IconButton(
-                  icon: Icon(Icons.shopping_cart, color: Colors.green),
-                  tooltip: 'Vender',
-                  onPressed: () => _mostrarDialogoVentaPorMetro(
-                    context,
-                    manager,
-                    lote,
-                    stock,
+                  elevation: 2,
+                  child: ListTile(
+                    leading: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: _parseColor(stock.colorCodigo),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey),
+                      ),
+                    ),
+                    title: Text('${stock.nombre} - ${stock.colorNombre}'),
+                    subtitle: Text(
+                      'Disponible: ${lote.cantidadDisponible} ${stock.unidadMedidaSecundaria}\n'
+                      'Apertura: ${lote.fechaApertura.toLocal().toString().split(" ")[0]}',
+                    ),
+                    isThreeLine: true,
+                    trailing: IconButton(
+                      icon: const Icon(
+                        Icons.shopping_cart,
+                        color: Colors.green,
+                      ),
+                      tooltip: 'Vender',
+                      onPressed: () => _mostrarDialogoVentaPorMetro(
+                        context,
+                        manager,
+                        lote,
+                        stock,
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         );

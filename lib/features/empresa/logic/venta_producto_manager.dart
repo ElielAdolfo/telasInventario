@@ -122,8 +122,14 @@ class VentaProductoManager extends ChangeNotifier {
   Future<List<StockLoteTienda>> getLotesPorProductoColor(
     String nombreProducto,
     String colorNombre,
+    tiendaId,
   ) async {
     try {
+      _productosConStock = await _stockTiendaService.getStockByTienda(tiendaId);
+      _productosConStock = _productosConStock
+          .where((stock) => stock.cantidadDisponible > 0)
+          .toList();
+
       // Filtrar los stocks de tienda que coincidan con el nombre y color
       final stocksTienda = _productosConStock
           .where(
@@ -143,7 +149,6 @@ class VentaProductoManager extends ChangeNotifier {
         );
         todosLotes.addAll(lotes);
       }
-
       // Filtrar los lotes que estén abiertos y tengan stock disponible
       return todosLotes
           .where((lote) => !lote.estaCerrada && lote.cantidadDisponible > 0)
@@ -159,10 +164,15 @@ class VentaProductoManager extends ChangeNotifier {
   Future<List<StockUnidadAbierta>> getUnidadesAbiertasPorProductoColor(
     String nombreProducto,
     String colorNombre,
+    tiendaId,
   ) async {
     try {
       // Primero obtenemos los lotes del producto
-      final lotes = await getLotesPorProductoColor(nombreProducto, colorNombre);
+      final lotes = await getLotesPorProductoColor(
+        nombreProducto,
+        colorNombre,
+        tiendaId,
+      );
 
       // Filtrar las unidades abiertas que pertenezcan a esos lotes
       final unidadesAbiertasFiltradas = <StockUnidadAbierta>[];
