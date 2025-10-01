@@ -336,4 +336,19 @@ class StockLoteTiendaService {
       return 0;
     }
   }
+
+  Future<StockLoteTienda?> getStockLoteById(String id) async {
+    final snapshot = await _dbRef.child(id).get();
+    if (snapshot.exists) {
+      return StockLoteTienda.fromJson(
+        Map<String, dynamic>.from(snapshot.value as Map),
+        id,
+      );
+    }
+    return null;
+  }
+
+  Future<void> updateStockLoteTienda(StockLoteTienda stock) async {
+    await _dbRef.child(stock.id).update(stock.toJson());
+  }
 }

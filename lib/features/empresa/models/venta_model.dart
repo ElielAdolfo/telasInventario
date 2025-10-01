@@ -55,4 +55,19 @@ class Venta {
       'updatedAt': updatedAt,
     };
   }
+
+  @override
+  String toString() {
+    return 'Venta('
+        'id: $id, '
+        'idTienda: $idTienda, '
+        'idEmpresa: $idEmpresa, '
+        'fechaVenta: $fechaVenta, '
+        'total: $total, '
+        'realizadoPor: $realizadoPor, '
+        'deleted: $deleted, '
+        'updatedAt: $updatedAt, '
+        'items: $items'
+        ')';
+  }
 }

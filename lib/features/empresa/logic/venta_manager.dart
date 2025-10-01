@@ -1,6 +1,7 @@
 // lib/features/empresa/logic/venta_manager.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/features/empresa/services/stock_lote_tienda_service.dart';
 import 'package:inventario/features/empresa/services/stock_tienda_service.dart';
 import '../services/venta_service.dart';
 import '../models/venta_model.dart';
@@ -8,6 +9,8 @@ import '../models/venta_model.dart';
 class VentaManager extends ChangeNotifier {
   final VentaService _ventaService = VentaService();
   final StockTiendaService _stockTiendaService = StockTiendaService();
+  final StockLoteTiendaService _stockLoteTiendaService =
+      StockLoteTiendaService();
 
   List<Venta> _ventas = [];
   bool _isLoading = false;
@@ -74,21 +77,36 @@ class VentaManager extends ChangeNotifier {
               await _stockTiendaService.updateStockTienda(stockActualizado);
             }
           } else if (item.tipoVenta == 'UNIDAD_ABIERTA' &&
-              item.idStockUnidadAbierta != null) {
-            // Obtener el stock de lote actual
-            final stockLoteTienda = await _stockTiendaService.getStockLoteById(
-              item.idStockUnidadAbierta!,
+              item.idStockLoteTienda != null) {
+            print(
+              'DEBUG item: tipo=${item.tipoVenta}, '
+              'idStockTienda=${item.idStockTienda}, '
+              'idStockLoteTienda=${item.idStockLoteTienda}, '
+              'idStockUnidadAbierta=${item.idStockUnidadAbierta}',
             );
-
-            if (stockLoteTienda != null) {
-              // Actualizar la cantidad vendida en el lote
-              final loteActualizado = stockLoteTienda.copyWith(
-                cantidadVendida:
-                    stockLoteTienda.cantidadVendida + item.cantidad,
+            //debemos buscar el lote i actualizar la cantidad vendida
+            final stockLote = await _stockLoteTiendaService.getStockLoteById(
+              item.idStockLoteTienda!,
+            );
+            if (stockLote != null) {
+              // Actualizamos la cantidadVendida
+              final stockActualizado = stockLote.copyWith(
+                cantidadVendida: stockLote.cantidadVendida + item.cantidad,
               );
 
-              // Guardar los cambios
-              await _stockTiendaService.updateStockLoteTienda(loteActualizado);
+              // Guardamos en Firebase
+              await _stockLoteTiendaService.updateStockLoteTienda(
+                stockActualizado,
+              );
+
+              print(
+                '✅ STOCK LOTE ACTUALIZADO: ${item.idStockLoteTienda} '
+                'nueva cantidadVendida = ${stockActualizado.cantidadVendida}',
+              );
+            } else {
+              print(
+                '⚠️ No se encontró el lote con ID ${item.idStockLoteTienda}',
+              );
             }
           }
         }
