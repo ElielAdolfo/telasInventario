@@ -6,9 +6,15 @@ class Empresa {
   final String ruc;
   final String logoUrl;
   final bool deleted;
-  final DateTime? deletedAt; // Nueva: fecha de eliminación
+  final DateTime? deletedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  // ✅ Nuevos campos para auditoría
+  final String? createdBy;
+  final String? updatedBy;
+  final String? deletedBy;
+  final String? restoredBy;
 
   Empresa({
     required this.id,
@@ -18,9 +24,13 @@ class Empresa {
     required this.ruc,
     required this.logoUrl,
     this.deleted = false,
-    this.deletedAt, // Puede ser nulo si no está eliminada
+    this.deletedAt,
     required this.createdAt,
     required this.updatedAt,
+    this.createdBy,
+    this.updatedBy,
+    this.deletedBy,
+    this.restoredBy,
   });
 
   factory Empresa.fromJson(Map<String, dynamic> json, String id) {
@@ -32,9 +42,15 @@ class Empresa {
       ruc: json['ruc'] ?? '',
       logoUrl: json['logoUrl'] ?? '',
       deleted: json['deleted'] ?? false,
-      deletedAt: json['deletedAt'] != null ? DateTime.parse(json['deletedAt']) : null,
+      deletedAt: json['deletedAt'] != null
+          ? DateTime.parse(json['deletedAt'])
+          : null,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+      createdBy: json['createdBy'],
+      updatedBy: json['updatedBy'],
+      deletedBy: json['deletedBy'],
+      restoredBy: json['restoredBy'],
     );
   }
 
@@ -49,6 +65,10 @@ class Empresa {
       'deletedAt': deletedAt?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'createdBy': createdBy,
+      'updatedBy': updatedBy,
+      'deletedBy': deletedBy,
+      'restoredBy': restoredBy,
     };
   }
 
@@ -60,6 +80,11 @@ class Empresa {
     String? logoUrl,
     bool? deleted,
     DateTime? deletedAt,
+    String? createdBy,
+    String? updatedBy,
+    String? deletedBy,
+    String? restoredBy,
+    DateTime? createdAt,
   }) {
     return Empresa(
       id: id,
@@ -70,8 +95,32 @@ class Empresa {
       logoUrl: logoUrl ?? this.logoUrl,
       deleted: deleted ?? this.deleted,
       deletedAt: deletedAt ?? this.deletedAt,
-      createdAt: createdAt,
+      createdAt: createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
+      createdBy: createdBy ?? this.createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
+      deletedBy: deletedBy ?? this.deletedBy,
+      restoredBy: restoredBy ?? this.restoredBy,
     );
+  }
+
+  @override
+  String toString() {
+    return 'Empresa('
+        'id: $id, '
+        'nombre: $nombre, '
+        'direccion: $direccion, '
+        'telefono: $telefono, '
+        'ruc: $ruc, '
+        'logoUrl: $logoUrl, '
+        'deleted: $deleted, '
+        'deletedAt: ${deletedAt?.toIso8601String()}, '
+        'createdAt: ${createdAt.toIso8601String()}, '
+        'updatedAt: ${updatedAt.toIso8601String()}, '
+        'createdBy: $createdBy, '
+        'updatedBy: $updatedBy, '
+        'deletedBy: $deletedBy, '
+        'restoredBy: $restoredBy'
+        ')';
   }
 }

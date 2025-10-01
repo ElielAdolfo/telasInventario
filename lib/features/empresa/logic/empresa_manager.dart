@@ -89,7 +89,8 @@ class EmpresaManager with ChangeNotifier {
   Stream<List<Empresa>> get empresasStream => _service.empresasStream();
 
   // Stream para empresas eliminadas
-  Stream<List<Empresa>> get deletedEmpresasStream => _service.deletedEmpresasStream();
+  Stream<List<Empresa>> get deletedEmpresasStream =>
+      _service.deletedEmpresasStream();
 
   // Modificar los métodos deleteEmpresa y restoreEmpresa para usar los nuevos métodos del servicio
   Future<void> deleteEmpresa(String id) async {

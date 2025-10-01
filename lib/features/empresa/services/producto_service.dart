@@ -1,34 +1,24 @@
 // lib/features/producto/services/producto_service.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/producto_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-class ProductoService {
-  // Referencia a la colección 'productos' en Firebase
-  late final DatabaseReference _dbRef;
+class ProductoService extends BaseService {
 
-  ProductoService() {
-    if (kIsWeb) {
-      _dbRef = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
-      ).ref('productos');
-    } else {
-      _dbRef = FirebaseDatabase.instance.ref('productos');
-    }
-  }
+  ProductoService() : super('productos');
 
   // Crear un nuevo producto en Firebase
   Future<String> createProducto(Producto producto) async {
-    final newRef = _dbRef.push();
+    final newRef = dbRef.push();
     await newRef.set(producto.toJson());
     return newRef.key!; // Devuelve el ID generado por Firebase
   }
 
   // Obtener todos los productos no eliminados
   Future<List<Producto>> getProductos() async {
-    final snapshot = await _dbRef.orderByChild('deleted').equalTo(false).get();
+    final snapshot = await dbRef.orderByChild('deleted').equalTo(false).get();
 
     if (snapshot.exists) {
       final productos = <Producto>[];
@@ -47,7 +37,7 @@ class ProductoService {
 
   // Obtener productos por tipo de producto
   Future<List<Producto>> getProductosByTipo(String idTipoProducto) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idTipoProducto')
         .equalTo(idTipoProducto)
         .once();
@@ -70,7 +60,7 @@ class ProductoService {
 
   // Obtener productos por color
   Future<List<Producto>> getProductosByColor(String idColor) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idColor')
         .equalTo(idColor)
         .once();
@@ -96,7 +86,7 @@ class ProductoService {
     String idTipoProducto,
     String idColor,
   ) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idTipoProducto')
         .equalTo(idTipoProducto)
         .once();
@@ -119,7 +109,7 @@ class ProductoService {
 
   // Obtener un producto por su ID
   Future<Producto?> getProductoById(String id) async {
-    final snapshot = await _dbRef.child(id).get();
+    final snapshot = await dbRef.child(id).get();
 
     if (snapshot.exists) {
       final producto = Producto.fromJson(
@@ -133,12 +123,12 @@ class ProductoService {
 
   // Actualizar un producto existente
   Future<void> updateProducto(Producto producto) async {
-    await _dbRef.child(producto.id).update(producto.toJson());
+    await dbRef.child(producto.id).update(producto.toJson());
   }
 
   // Eliminar un producto (eliminación lógica)
   Future<void> deleteProducto(String id) async {
-    await _dbRef.child(id).update({
+    await dbRef.child(id).update({
       'deleted': true,
       'updatedAt': DateTime.now().toIso8601String(),
     });
@@ -146,7 +136,7 @@ class ProductoService {
 
   // Stream para escuchar cambios en tiempo real en todos los productos
   Stream<List<Producto>> productosStream() {
-    return _dbRef.orderByChild('deleted').equalTo(false).onValue.map((event) {
+    return dbRef.orderByChild('deleted').equalTo(false).onValue.map((event) {
       final productos = <Producto>[];
       if (event.snapshot.exists) {
         for (var child in event.snapshot.children) {
@@ -164,7 +154,7 @@ class ProductoService {
 
   // Stream para escuchar cambios en productos de un tipo específico
   Stream<List<Producto>> productosByTipoStream(String idTipoProducto) {
-    return _dbRef
+    return dbRef
         .orderByChild('idTipoProducto')
         .equalTo(idTipoProducto)
         .onValue
@@ -187,7 +177,7 @@ class ProductoService {
 
   // Stream para escuchar cambios en productos de un color específico
   Stream<List<Producto>> productosByColorStream(String idColor) {
-    return _dbRef.orderByChild('idColor').equalTo(idColor).onValue.map((event) {
+    return dbRef.orderByChild('idColor').equalTo(idColor).onValue.map((event) {
       final productos = <Producto>[];
       if (event.snapshot.exists) {
         (event.snapshot.value as Map).forEach((key, value) {
@@ -209,7 +199,7 @@ class ProductoService {
     String nombre,
     String idTipoProducto,
   ) async {
-    final snapshot = await _dbRef.orderByChild('nombre').equalTo(nombre).once();
+    final snapshot = await dbRef.orderByChild('nombre').equalTo(nombre).once();
 
     if (snapshot.snapshot.exists) {
       for (var child in snapshot.snapshot.children) {
@@ -230,7 +220,7 @@ class ProductoService {
     String query, {
     String? idTipoProducto,
   }) async {
-    final snapshot = await _dbRef.once();
+    final snapshot = await dbRef.once();
     final resultados = <Producto>[];
     final queryLower = query.toLowerCase();
 
@@ -263,7 +253,7 @@ class ProductoService {
     double max, {
     String? idTipoProducto,
   }) async {
-    final snapshot = await _dbRef.once();
+    final snapshot = await dbRef.once();
     final resultados = <Producto>[];
 
     if (snapshot.snapshot.exists) {
@@ -293,7 +283,7 @@ class ProductoService {
   Future<List<Producto>> getProductosByIds(List<String> ids) async {
     if (ids.isEmpty) return [];
 
-    final snapshot = await _dbRef.once();
+    final snapshot = await dbRef.once();
     final resultados = <Producto>[];
     final idsSet = ids.toSet(); // Para búsqueda más eficiente
 
@@ -316,7 +306,7 @@ class ProductoService {
 
   // Restaurar un producto eliminado
   Future<void> restoreProducto(String id) async {
-    await _dbRef.child(id).update({
+    await dbRef.child(id).update({
       'deleted': false,
       'updatedAt': DateTime.now().toIso8601String(),
     });
@@ -324,12 +314,12 @@ class ProductoService {
 
   // Eliminar permanentemente un producto (cuidado: operación destructiva)
   Future<void> permanentDeleteProducto(String id) async {
-    await _dbRef.child(id).remove();
+    await dbRef.child(id).remove();
   }
 
   // Obtener todos los productos incluyendo los eliminados (para administración)
   Future<List<Producto>> getAllProductos() async {
-    final snapshot = await _dbRef.get();
+    final snapshot = await dbRef.get();
 
     if (snapshot.exists) {
       final productos = <Producto>[];
@@ -351,7 +341,7 @@ class ProductoService {
     Map<String, double> preciosActualizados,
   ) async {
     for (var entry in preciosActualizados.entries) {
-      await _dbRef.child(entry.key).update({
+      await dbRef.child(entry.key).update({
         'precioUnitario': entry.value,
         'precioCompleto':
             entry.value *

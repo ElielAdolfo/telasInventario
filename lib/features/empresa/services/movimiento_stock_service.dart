@@ -3,24 +3,15 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/movimiento_stock_model.dart';
 
-class MovimientoStockService {
-  late final DatabaseReference _dbRef;
+class MovimientoStockService extends BaseService {
 
-  MovimientoStockService() {
-    if (kIsWeb) {
-      _dbRef = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
-      ).ref('movimientos_stock');
-    } else {
-      _dbRef = FirebaseDatabase.instance.ref('movimientos_stock');
-    }
-  }
+  MovimientoStockService() : super('movimientos_stock');
 
   Future<String> createMovimientoStock(MovimientoStock movimiento) async {
-    final newRef = _dbRef.push();
+    final newRef = dbRef.push();
     await newRef.set(movimiento.toJson());
     return newRef.key!;
   }
@@ -28,7 +19,7 @@ class MovimientoStockService {
   Future<List<MovimientoStock>> getMovimientosByEmpresa(
     String idEmpresa,
   ) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idEmpresa')
         .equalTo(idEmpresa)
         .once();
@@ -46,7 +37,7 @@ class MovimientoStockService {
   }
 
   Future<List<MovimientoStock>> getMovimientosByTienda(String idTienda) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idTienda')
         .equalTo(idTienda)
         .once();
@@ -66,7 +57,7 @@ class MovimientoStockService {
   Future<List<MovimientoStock>> getMovimientosBySolicitud(
     String idSolicitud,
   ) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idSolicitudTraslado')
         .equalTo(idSolicitud)
         .once();
@@ -84,7 +75,7 @@ class MovimientoStockService {
   }
 
   Stream<List<MovimientoStock>> movimientosByEmpresaStream(String idEmpresa) {
-    return _dbRef.orderByChild('idEmpresa').equalTo(idEmpresa).onValue.map((
+    return dbRef.orderByChild('idEmpresa').equalTo(idEmpresa).onValue.map((
       event,
     ) {
       final movimientos = <MovimientoStock>[];
@@ -100,7 +91,7 @@ class MovimientoStockService {
   }
 
   Stream<List<MovimientoStock>> movimientosByTiendaStream(String idTienda) {
-    return _dbRef.orderByChild('idTienda').equalTo(idTienda).onValue.map((
+    return dbRef.orderByChild('idTienda').equalTo(idTienda).onValue.map((
       event,
     ) {
       final movimientos = <MovimientoStock>[];

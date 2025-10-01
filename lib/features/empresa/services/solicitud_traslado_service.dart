@@ -3,24 +3,15 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/solicitud_traslado_model.dart';
 
-class SolicitudTrasladoService {
-  late final DatabaseReference _dbRef;
+class SolicitudTrasladoService extends BaseService {
 
-  SolicitudTrasladoService() {
-    if (kIsWeb) {
-      _dbRef = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
-      ).ref('solicitudes_traslado');
-    } else {
-      _dbRef = FirebaseDatabase.instance.ref('solicitudes_traslado');
-    }
-  }
+  SolicitudTrasladoService() : super('solicitudes_traslado');
 
   Future<String> createSolicitudTraslado(SolicitudTraslado solicitud) async {
-    final newRef = _dbRef.push();
+    final newRef = dbRef.push();
     await newRef.set(solicitud.toJson());
     return newRef.key!;
   }
@@ -28,7 +19,7 @@ class SolicitudTrasladoService {
   Future<List<SolicitudTraslado>> getSolicitudesByEmpresa(
     String idEmpresa,
   ) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idEmpresa')
         .equalTo(idEmpresa)
         .once();
@@ -50,7 +41,7 @@ class SolicitudTrasladoService {
   Future<List<SolicitudTraslado>> getSolicitudesByTienda(
     String idTienda,
   ) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idTienda')
         .equalTo(idTienda)
         .once();
@@ -72,7 +63,7 @@ class SolicitudTrasladoService {
   Future<List<SolicitudTraslado>> getSolicitudesPendientesByTienda(
     String idTienda,
   ) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idTienda')
         .equalTo(idTienda)
         .once();
@@ -97,7 +88,7 @@ class SolicitudTrasladoService {
   }
 
   Future<SolicitudTraslado?> getSolicitudById(String id) async {
-    final snapshot = await _dbRef.child(id).get();
+    final snapshot = await dbRef.child(id).get();
     if (snapshot.exists) {
       return SolicitudTraslado.fromJson(
         Map<String, dynamic>.from(snapshot.value as Map),
@@ -109,7 +100,7 @@ class SolicitudTrasladoService {
 
   Future<bool> updateSolicitudTraslado(SolicitudTraslado solicitud) async {
     try {
-      await _dbRef.child(solicitud.id).update(solicitud.toJson());
+      await dbRef.child(solicitud.id).update(solicitud.toJson());
       return true;
     } catch (e) {
       print("Error al actualizar solicitud: $e");
@@ -118,7 +109,7 @@ class SolicitudTrasladoService {
   }
 
   Future<void> cancelarSolicitud(String id, String motivo) async {
-    await _dbRef.child(id).update({
+    await dbRef.child(id).update({
       'estado': 'CANCELADO',
       'motivoRechazo': motivo,
       'updatedAt': DateTime.now().toIso8601String(),
@@ -127,7 +118,7 @@ class SolicitudTrasladoService {
 
   // NUEVO: Método para obtener el siguiente correlativo
   Future<int> getSiguienteCorrelativo(String idEmpresa) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idEmpresa')
         .equalTo(idEmpresa)
         .once();
@@ -161,7 +152,7 @@ class SolicitudTrasladoService {
   }
 
   Stream<List<SolicitudTraslado>> solicitudesByEmpresaStream(String idEmpresa) {
-    return _dbRef.orderByChild('idEmpresa').equalTo(idEmpresa).onValue.map((
+    return dbRef.orderByChild('idEmpresa').equalTo(idEmpresa).onValue.map((
       event,
     ) {
       final solicitudes = <SolicitudTraslado>[];
@@ -177,7 +168,7 @@ class SolicitudTrasladoService {
   }
 
   Stream<List<SolicitudTraslado>> solicitudesByTiendaStream(String idTienda) {
-    return _dbRef.orderByChild('idTienda').equalTo(idTienda).onValue.map((
+    return dbRef.orderByChild('idTienda').equalTo(idTienda).onValue.map((
       event,
     ) {
       final solicitudes = <SolicitudTraslado>[];

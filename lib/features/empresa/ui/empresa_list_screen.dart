@@ -13,8 +13,23 @@ import 'deleted_empresas_screen.dart';
 
 import 'package:inventario/features/empresa/ui/agregar_stock_empresa_screen.dart';
 
-class EmpresaListScreen extends StatelessWidget {
+class EmpresaListScreen extends StatefulWidget {
   const EmpresaListScreen({super.key});
+
+  @override
+  State<EmpresaListScreen> createState() => _EmpresaListScreenState();
+}
+
+class _EmpresaListScreenState extends State<EmpresaListScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Espera a que el widget esté montado antes de cargar datos
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<EmpresaManager>().loadEmpresas();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

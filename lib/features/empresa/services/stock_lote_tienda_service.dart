@@ -3,26 +3,17 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/stock_lote_tienda_model.dart';
 
-class StockLoteTiendaService {
-  late final DatabaseReference _dbRef;
+class StockLoteTiendaService extends BaseService {
 
-  StockLoteTiendaService() {
-    if (kIsWeb) {
-      _dbRef = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
-      ).ref('stock_lote_tienda');
-    } else {
-      _dbRef = FirebaseDatabase.instance.ref('stock_lote_tienda');
-    }
-  }
+  StockLoteTiendaService() : super('stock_lote_tienda');
 
   /// Crea un nuevo lote en Firebase
   Future<String> createLote(StockLoteTienda lote) async {
     try {
-      final newRef = _dbRef.push();
+      final newRef = dbRef.push();
       await newRef.set(lote.toJson());
       return newRef.key!;
     } catch (e) {
@@ -62,7 +53,7 @@ class StockLoteTiendaService {
       final lotes = <StockLoteTienda>[];
 
       // Obtenemos todos los lotes
-      final lotesSnapshot = await _dbRef.once();
+      final lotesSnapshot = await dbRef.once();
 
       if (lotesSnapshot.snapshot.exists) {
         (lotesSnapshot.snapshot.value as Map).forEach((key, value) {
@@ -90,7 +81,7 @@ class StockLoteTiendaService {
     String idStockTienda,
   ) async {
     try {
-      final snapshot = await _dbRef
+      final snapshot = await dbRef
           .orderByChild('idStockTienda')
           .equalTo(idStockTienda)
           .once();
@@ -118,7 +109,7 @@ class StockLoteTiendaService {
   /// Obtiene un lote por su ID
   Future<StockLoteTienda?> getLoteById(String id) async {
     try {
-      final snapshot = await _dbRef.child(id).get();
+      final snapshot = await dbRef.child(id).get();
       if (snapshot.exists) {
         return StockLoteTienda.fromJson(
           Map<String, dynamic>.from(snapshot.value as Map),
@@ -135,7 +126,7 @@ class StockLoteTiendaService {
   /// Actualiza un lote existente
   Future<bool> updateLote(StockLoteTienda lote) async {
     try {
-      await _dbRef.child(lote.id).update(lote.toJson());
+      await dbRef.child(lote.id).update(lote.toJson());
       return true;
     } catch (e) {
       print("Error al actualizar lote: $e");
@@ -146,7 +137,7 @@ class StockLoteTiendaService {
   /// Elimina un lote (borrado lógico)
   Future<bool> deleteLote(String id) async {
     try {
-      await _dbRef.child(id).update({
+      await dbRef.child(id).update({
         'deleted': true,
         'updatedAt': DateTime.now().toIso8601String(),
       });
@@ -159,7 +150,7 @@ class StockLoteTiendaService {
 
   /// Stream para escuchar cambios en los lotes de una tienda
   Stream<List<StockLoteTienda>> lotesByTiendaStream(String idTienda) {
-    return _dbRef.onValue.asyncMap((event) async {
+    return dbRef.onValue.asyncMap((event) async {
       // Primero obtenemos los stocks de tienda de la tienda
       final stockTiendaRef = FirebaseDatabase.instance.ref('stock_tienda');
       final stockTiendaSnapshot = await stockTiendaRef
@@ -206,7 +197,7 @@ class StockLoteTiendaService {
 
   /// Stream para escuchar cambios en los lotes de un stock de tienda específico
   Stream<List<StockLoteTienda>> lotesByStockTiendaStream(String idStockTienda) {
-    return _dbRef
+    return dbRef
         .orderByChild('idStockTienda')
         .equalTo(idStockTienda)
         .onValue
@@ -229,7 +220,7 @@ class StockLoteTiendaService {
 
   /// Stream para escuchar cambios en un lote específico
   Stream<StockLoteTienda?> loteStream(String id) {
-    return _dbRef.child(id).onValue.map((event) {
+    return dbRef.child(id).onValue.map((event) {
       if (event.snapshot.exists) {
         return StockLoteTienda.fromJson(
           Map<String, dynamic>.from(event.snapshot.value as Map),
@@ -269,7 +260,7 @@ class StockLoteTiendaService {
   /// Cierra un lote (marca como cerrado)
   Future<bool> cerrarLote(String id, String cerradoPor) async {
     try {
-      await _dbRef.child(id).update({
+      await dbRef.child(id).update({
         'estaCerrada': true,
         'fechaCierre': DateTime.now().toIso8601String(),
         'cerradoPor': cerradoPor,
@@ -292,7 +283,7 @@ class StockLoteTiendaService {
       }
 
       // Actualizar la cantidad vendida
-      await _dbRef.child(id).update({
+      await dbRef.child(id).update({
         'cantidadVendida': lote.cantidadVendida + cantidad,
         'updatedAt': DateTime.now().toIso8601String(),
       });
@@ -340,7 +331,7 @@ class StockLoteTiendaService {
   }
 
   Future<StockLoteTienda?> getStockLoteById(String id) async {
-    final snapshot = await _dbRef.child(id).get();
+    final snapshot = await dbRef.child(id).get();
     if (snapshot.exists) {
       return StockLoteTienda.fromJson(
         Map<String, dynamic>.from(snapshot.value as Map),
@@ -351,6 +342,6 @@ class StockLoteTiendaService {
   }
 
   Future<void> updateStockLoteTienda(StockLoteTienda stock) async {
-    await _dbRef.child(stock.id).update(stock.toJson());
+    await dbRef.child(stock.id).update(stock.toJson());
   }
 }

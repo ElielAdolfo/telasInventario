@@ -2,32 +2,21 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/unidad_medida_model.dart';
 
-class UnidadMedidaService {
-  late final DatabaseReference _dbRef;
+class UnidadMedidaService extends BaseService {
 
-  UnidadMedidaService() {
-    // ✅ Para Web necesitamos especificar la URL completa
-    if (kIsWeb) {
-      _dbRef = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://inventario-de053-default-rtdb.firebaseio.com', // Tu URL de Firebase Realtime Database
-      ).ref('unidades_medida');
-    } else {
-      _dbRef = FirebaseDatabase.instance.ref('unidades_medida');
-    }
-  }
+  UnidadMedidaService() : super('unidades_medida');
 
   Future<String> createUnidadMedida(UnidadMedida unidadMedida) async {
-    final newRef = _dbRef.push();
+    final newRef = dbRef.push();
     await newRef.set(unidadMedida.toJson());
     return newRef.key!;
   }
 
   Future<List<UnidadMedida>> getUnidadesMedida() async {
-    final snapshot = await _dbRef.orderByChild('deleted').equalTo(false).get();
+    final snapshot = await dbRef.orderByChild('deleted').equalTo(false).get();
     if (snapshot.exists) {
       final unidades = <UnidadMedida>[];
       for (var child in snapshot.children) {
@@ -44,7 +33,7 @@ class UnidadMedidaService {
   }
 
   Future<UnidadMedida?> getUnidadMedidaById(String id) async {
-    final snapshot = await _dbRef.child(id).get();
+    final snapshot = await dbRef.child(id).get();
     if (snapshot.exists) {
       final unidad = UnidadMedida.fromJson(
         Map<String, dynamic>.from(snapshot.value as Map),
@@ -56,11 +45,11 @@ class UnidadMedidaService {
   }
 
   Future<void> updateUnidadMedida(UnidadMedida unidadMedida) async {
-    await _dbRef.child(unidadMedida.id).update(unidadMedida.toJson());
+    await dbRef.child(unidadMedida.id).update(unidadMedida.toJson());
   }
 
   Future<void> deleteUnidadMedida(String id) async {
-    await _dbRef.child(id).update({
+    await dbRef.child(id).update({
       'deleted': true,
       'updatedAt': DateTime.now().toIso8601String(),
     });
@@ -68,7 +57,7 @@ class UnidadMedidaService {
 
   Future<bool> existsUnidadMedidaByNombre(String nombre) async {
     final nombreFormateado = UnidadMedida.formatearNombre(nombre);
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('nombre')
         .equalTo(nombreFormateado)
         .once();
@@ -85,7 +74,7 @@ class UnidadMedidaService {
   }
 
   Stream<List<UnidadMedida>> unidadesMedidaStream() {
-    return _dbRef.orderByChild('deleted').equalTo(false).onValue.map((event) {
+    return dbRef.orderByChild('deleted').equalTo(false).onValue.map((event) {
       final unidades = <UnidadMedida>[];
       if (event.snapshot.exists) {
         for (var child in event.snapshot.children) {

@@ -17,7 +17,6 @@ class EmpresaDashboardScreen extends StatefulWidget {
 }
 
 class _EmpresaDashboardScreenState extends State<EmpresaDashboardScreen> {
-  final EmpresaService _service = EmpresaService();
   final TiendaService _tiendaService = TiendaService();
   bool _isLoading = true;
   Map<String, dynamic> _dashboardData = {};

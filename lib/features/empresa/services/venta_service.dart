@@ -3,30 +3,21 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/venta_model.dart';
 
-class VentaService {
-  late final DatabaseReference _dbRef;
+class VentaService extends BaseService {
 
-  VentaService() {
-    if (kIsWeb) {
-      _dbRef = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
-      ).ref('ventas');
-    } else {
-      _dbRef = FirebaseDatabase.instance.ref('ventas');
-    }
-  }
+  VentaService() : super('ventas');
 
   Future<String> createVenta(Venta venta) async {
-    final newRef = _dbRef.push();
+    final newRef = dbRef.push();
     await newRef.set(venta.toJson());
     return newRef.key!;
   }
 
   Future<List<Venta>> getVentasByTienda(String idTienda) async {
-    final snapshot = await _dbRef
+    final snapshot = await dbRef
         .orderByChild('idTienda')
         .equalTo(idTienda)
         .once();
@@ -53,7 +44,7 @@ class VentaService {
 
   Future<bool> updateVenta(Venta venta) async {
     try {
-      await _dbRef.child(venta.id).update(venta.toJson());
+      await dbRef.child(venta.id).update(venta.toJson());
       return true;
     } catch (e) {
       print("Error al actualizar venta: $e");
@@ -63,7 +54,7 @@ class VentaService {
 
   Future<bool> deleteVenta(String id) async {
     try {
-      await _dbRef.child(id).update({
+      await dbRef.child(id).update({
         'deleted': true,
         'updatedAt': DateTime.now().toIso8601String(),
       });
@@ -75,7 +66,7 @@ class VentaService {
   }
 
   Stream<List<Venta>> ventasByTiendaStream(String idTienda) {
-    return _dbRef.orderByChild('idTienda').equalTo(idTienda).onValue.map((
+    return dbRef.orderByChild('idTienda').equalTo(idTienda).onValue.map((
       event,
     ) {
       final ventas = <Venta>[];

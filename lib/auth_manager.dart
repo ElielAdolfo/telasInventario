@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 
 class AuthManager extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  User? user;
+  User? _user;
   String? errorMessage;
 
   AuthManager() {
-    user = _auth.currentUser;
+    _user = _auth.currentUser;
   }
 
-  bool get isLoggedIn => user != null;
+  bool get isLoggedIn => _user != null;
+
+  String? get userId => _user?.uid;
+  String? get userEmail => _user?.email;
+  User? get user => _user;
 
   Future<void> signIn(String email, String password) async {
     try {
@@ -18,7 +22,7 @@ class AuthManager extends ChangeNotifier {
         email: email,
         password: password,
       );
-      user = result.user;
+      _user = result.user;
       errorMessage = null;
       notifyListeners();
     } on FirebaseAuthException catch (e) {
@@ -29,7 +33,7 @@ class AuthManager extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _auth.signOut();
-    user = null;
+    _user = null;
     notifyListeners();
   }
 
@@ -39,7 +43,7 @@ class AuthManager extends ChangeNotifier {
         email: email,
         password: password,
       );
-      user = result.user;
+      _user = result.user;
       errorMessage = null;
       notifyListeners();
     } on FirebaseAuthException catch (e) {

@@ -3,25 +3,16 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:inventario/features/empresa/services/base_service.dart';
 import 'package:inventario/features/empresa/services/stock_lote_tienda_service.dart';
 import '../models/stock_unidad_abierta_model.dart';
 
-class StockUnidadAbiertaService {
-  late final DatabaseReference _dbRef;
+class StockUnidadAbiertaService extends BaseService {
 
-  StockUnidadAbiertaService() {
-    if (kIsWeb) {
-      _dbRef = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
-      ).ref('stock_unidad_abierta');
-    } else {
-      _dbRef = FirebaseDatabase.instance.ref('stock_unidad_abierta');
-    }
-  }
+  StockUnidadAbiertaService() : super('stock_unidad_abierta');
 
   Future<String> createUnidadAbierta(StockUnidadAbierta unidad) async {
-    final newRef = _dbRef.push();
+    final newRef = dbRef.push();
     await newRef.set(unidad.toJson());
     return newRef.key!;
   }
@@ -42,7 +33,7 @@ class StockUnidadAbiertaService {
 
     final unidades = <StockUnidadAbierta>[];
     for (String idLote in idsLotes) {
-      final snapshot = await _dbRef
+      final snapshot = await dbRef
           .orderByChild('idStockLoteTienda')
           .equalTo(idLote)
           .once();
@@ -64,7 +55,7 @@ class StockUnidadAbiertaService {
   }
 
   Future<StockUnidadAbierta?> getUnidadAbiertaById(String id) async {
-    final snapshot = await _dbRef.child(id).get();
+    final snapshot = await dbRef.child(id).get();
     if (snapshot.exists) {
       return StockUnidadAbierta.fromJson(
         Map<String, dynamic>.from(snapshot.value as Map),
@@ -76,7 +67,7 @@ class StockUnidadAbiertaService {
 
   Future<bool> updateUnidadAbierta(StockUnidadAbierta unidad) async {
     try {
-      await _dbRef.child(unidad.id).update(unidad.toJson());
+      await dbRef.child(unidad.id).update(unidad.toJson());
       return true;
     } catch (e) {
       print("Error al actualizar unidad abierta: $e");
@@ -86,7 +77,7 @@ class StockUnidadAbiertaService {
 
   Future<bool> deleteUnidadAbierta(String id) async {
     try {
-      await _dbRef.child(id).update({
+      await dbRef.child(id).update({
         'deleted': true,
         'updatedAt': DateTime.now().toIso8601String(),
       });
@@ -100,7 +91,7 @@ class StockUnidadAbiertaService {
   Stream<List<StockUnidadAbierta>> unidadesAbiertasByTiendaStream(
     String idTienda,
   ) {
-    return _dbRef.onValue.map((event) {
+    return dbRef.onValue.map((event) {
       final unidades = <StockUnidadAbierta>[];
       if (event.snapshot.exists) {
         (event.snapshot.value as Map).forEach((key, value) {
