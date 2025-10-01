@@ -1,5 +1,6 @@
 // lib/features/empresa/services/stock_lote_tienda_service.dart
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/stock_lote_tienda_model.dart';
@@ -9,7 +10,8 @@ class StockLoteTiendaService {
 
   StockLoteTiendaService() {
     if (kIsWeb) {
-      _dbRef = FirebaseDatabase(
+      _dbRef = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
         databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
       ).ref('stock_lote_tienda');
     } else {

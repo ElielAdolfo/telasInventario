@@ -1,4 +1,5 @@
 // lib/features/producto/services/tipo_producto_service.dart
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../models/tipo_producto_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -8,7 +9,8 @@ class TipoProductoService {
 
   TipoProductoService() {
     if (kIsWeb) {
-      _dbRef = FirebaseDatabase(
+      _dbRef = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
         databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
       ).ref('tipos_producto');
     } else {

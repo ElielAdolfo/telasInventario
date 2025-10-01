@@ -1,4 +1,4 @@
-// lib/features/empresa/services/color_service.dart
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/color_model.dart';
@@ -8,25 +8,26 @@ class ColorService {
 
   ColorService() {
     if (kIsWeb) {
-      _dbRef = FirebaseDatabase(
+      // Para web, necesitamos pasar la app inicializada
+      _dbRef = FirebaseDatabase.instanceFor(
+        app: Firebase.app(), // Esto obtiene la app por defecto
         databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
       ).ref('colores');
     } else {
+      // Para móvil / desktop
       _dbRef = FirebaseDatabase.instance.ref('colores');
     }
   }
 
   Future<List<ColorProducto>> getColores() async {
-    final snapshot = await _dbRef.once();
-
-    if (snapshot.snapshot.exists) {
+    final snapshot = await _dbRef.get();
+    if (snapshot.exists) {
       final colores = <ColorProducto>[];
-      (snapshot.snapshot.value as Map).forEach((key, value) {
+      (snapshot.value as Map).forEach((key, value) {
         final color = ColorProducto.fromJson(
           Map<String, dynamic>.from(value),
           key,
         );
-        // Filtrar solo los no eliminados
         if (!color.deleted) {
           colores.add(color);
         }
@@ -85,7 +86,6 @@ class ColorService {
             Map<String, dynamic>.from(value),
             key,
           );
-          // Filtrar solo los no eliminados
           if (!color.deleted) {
             colores.add(color);
           }

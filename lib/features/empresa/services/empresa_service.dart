@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:inventario/features/empresa/models/empresa_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -8,8 +9,10 @@ class EmpresaService {
   EmpresaService() {
     // Para Web necesitamos especificar la URL completa
     if (kIsWeb) {
-      _dbRef = FirebaseDatabase(
-        databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com', // ✅ Tu URL de Firebase Realtime Database
+      _dbRef = FirebaseDatabase.instanceFor(
+        app: Firebase.app(), // Esto obtiene la app por defecto
+        databaseURL:
+            'https://inventario-de053-default-rtdb.firebaseio.com', // ✅ Tu URL de Firebase Realtime Database
       ).ref('companies');
     } else {
       _dbRef = FirebaseDatabase.instance.ref('companies');
@@ -30,10 +33,12 @@ class EmpresaService {
     if (snapshot.exists) {
       final empresas = <Empresa>[];
       for (var child in snapshot.children) {
-        empresas.add(Empresa.fromJson(
-          Map<String, dynamic>.from(child.value as Map),
-          child.key!,
-        ));
+        empresas.add(
+          Empresa.fromJson(
+            Map<String, dynamic>.from(child.value as Map),
+            child.key!,
+          ),
+        );
       }
       return empresas;
     }
@@ -64,10 +69,12 @@ class EmpresaService {
       final empresas = <Empresa>[];
       if (event.snapshot.exists) {
         for (var child in event.snapshot.children) {
-          empresas.add(Empresa.fromJson(
-            Map<String, dynamic>.from(child.value as Map),
-            child.key!,
-          ));
+          empresas.add(
+            Empresa.fromJson(
+              Map<String, dynamic>.from(child.value as Map),
+              child.key!,
+            ),
+          );
         }
       }
       return empresas;
@@ -80,10 +87,12 @@ class EmpresaService {
       final empresas = <Empresa>[];
       if (event.snapshot.exists) {
         for (var child in event.snapshot.children) {
-          empresas.add(Empresa.fromJson(
-            Map<String, dynamic>.from(child.value as Map),
-            child.key!,
-          ));
+          empresas.add(
+            Empresa.fromJson(
+              Map<String, dynamic>.from(child.value as Map),
+              child.key!,
+            ),
+          );
         }
       }
       return empresas;
@@ -99,7 +108,7 @@ class EmpresaService {
     });
   }
 
-// Modificar el método restoreEmpresa para limpiar la fecha de eliminación
+  // Modificar el método restoreEmpresa para limpiar la fecha de eliminación
   Future<void> restoreEmpresa(String id) async {
     await _dbRef.child(id).update({
       'deleted': false,

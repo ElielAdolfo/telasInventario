@@ -1,4 +1,5 @@
 // lib/features/producto/services/unidad_medida_service.dart
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/unidad_medida_model.dart';
@@ -9,7 +10,8 @@ class UnidadMedidaService {
   UnidadMedidaService() {
     // ✅ Para Web necesitamos especificar la URL completa
     if (kIsWeb) {
-      _dbRef = FirebaseDatabase(
+      _dbRef = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
         databaseURL:
             'https://inventario-de053-default-rtdb.firebaseio.com', // Tu URL de Firebase Realtime Database
       ).ref('unidades_medida');

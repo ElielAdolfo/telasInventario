@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:inventario/auth_gate.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/carrito_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
 import 'package:inventario/features/empresa/logic/movimiento_stock_manager.dart';
@@ -30,6 +32,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthManager()),
         ChangeNotifierProvider(create: (_) => EmpresaManager()),
         ChangeNotifierProvider(create: (_) => TiendaManager()),
         ChangeNotifierProvider(create: (_) => TipoProductoManager()),
@@ -55,7 +58,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const FirebaseConnectionScreen(),
+        home: const AuthGate(),
       ),
     );
   }

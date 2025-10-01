@@ -1,5 +1,6 @@
 // lib/features/solicitudes/services/solicitud_traslado_service.dart
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/solicitud_traslado_model.dart';
@@ -9,7 +10,8 @@ class SolicitudTrasladoService {
 
   SolicitudTrasladoService() {
     if (kIsWeb) {
-      _dbRef = FirebaseDatabase(
+      _dbRef = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
         databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
       ).ref('solicitudes_traslado');
     } else {
