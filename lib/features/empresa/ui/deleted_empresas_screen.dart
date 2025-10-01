@@ -4,14 +4,12 @@ import 'package:provider/provider.dart';
 import '../logic/empresa_manager.dart';
 
 class DeletedEmpresasScreen extends StatelessWidget {
-  const DeletedEmpresasScreen({Key? key}) : super(key: key);
+  const DeletedEmpresasScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Empresas Eliminadas'),
-      ),
+      appBar: AppBar(title: const Text('Empresas Eliminadas')),
       body: Consumer<EmpresaManager>(
         builder: (context, manager, child) {
           if (manager.isLoading) {
@@ -34,7 +32,9 @@ class DeletedEmpresasScreen extends StatelessWidget {
                 final empresa = manager.deletedEmpresas[index];
                 return ListTile(
                   title: Text(empresa.nombre),
-                  subtitle: Text('Eliminada el: ${empresa.updatedAt.toString()}'),
+                  subtitle: Text(
+                    'Eliminada el: ${empresa.updatedAt.toString()}',
+                  ),
                   trailing: IconButton(
                     icon: const Icon(Icons.restore),
                     onPressed: () => _showRestoreConfirmation(context, empresa),
@@ -62,8 +62,10 @@ class DeletedEmpresasScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              Provider.of<EmpresaManager>(context, listen: false)
-                  .restoreEmpresa(empresa.id);
+              Provider.of<EmpresaManager>(
+                context,
+                listen: false,
+              ).restoreEmpresa(empresa.id);
               Navigator.pop(context);
             },
             child: const Text('Restaurar'),

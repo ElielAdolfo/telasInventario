@@ -14,10 +14,10 @@ class TipoProductoSelectionScreen extends StatefulWidget {
   final String? idEmpresa;
   final String? empresaNombre;
   const TipoProductoSelectionScreen({
-    Key? key,
+    super.key,
     this.idEmpresa,
     this.empresaNombre,
-  }) : super(key: key);
+  });
 
   @override
   State<TipoProductoSelectionScreen> createState() =>

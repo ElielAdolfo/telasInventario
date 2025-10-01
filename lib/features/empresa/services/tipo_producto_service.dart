@@ -26,14 +26,14 @@ class TipoProductoService {
     final snapshot = await _dbRef.orderByChild('deleted').equalTo(false).get();
     if (snapshot.exists) {
       final tipos = <TipoProducto>[];
-      snapshot.children.forEach((child) {
+      for (var child in snapshot.children) {
         tipos.add(
           TipoProducto.fromJson(
             Map<String, dynamic>.from(child.value as Map),
             child.key!,
           ),
         );
-      });
+      }
       return tipos;
     }
     return [];
@@ -113,14 +113,14 @@ class TipoProductoService {
     return _dbRef.orderByChild('deleted').equalTo(false).onValue.map((event) {
       final tipos = <TipoProducto>[];
       if (event.snapshot.exists) {
-        event.snapshot.children.forEach((child) {
+        for (var child in event.snapshot.children) {
           tipos.add(
             TipoProducto.fromJson(
               Map<String, dynamic>.from(child.value as Map),
               child.key!,
             ),
           );
-        });
+        }
       }
       return tipos;
     });

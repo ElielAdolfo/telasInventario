@@ -15,11 +15,11 @@ class AgregarStockEmpresaScreen extends StatefulWidget {
   final TipoProducto? tipoProducto;
 
   const AgregarStockEmpresaScreen({
-    Key? key,
+    super.key,
     required this.idEmpresa,
     required this.empresaNombre,
     this.tipoProducto,
-  }) : super(key: key);
+  });
 
   @override
   State<AgregarStockEmpresaScreen> createState() =>

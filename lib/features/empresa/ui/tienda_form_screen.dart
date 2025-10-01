@@ -7,8 +7,7 @@ class TiendaFormScreen extends StatefulWidget {
   final String empresaId;
   final Tienda? tienda;
 
-  const TiendaFormScreen({Key? key, required this.empresaId, this.tienda})
-    : super(key: key);
+  const TiendaFormScreen({super.key, required this.empresaId, this.tienda});
 
   @override
   _TiendaFormScreenState createState() => _TiendaFormScreenState();

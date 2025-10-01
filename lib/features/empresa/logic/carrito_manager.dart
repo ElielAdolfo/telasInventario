@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/carrito_item_model.dart';
 
 class CarritoManager extends ChangeNotifier {
-  List<CarritoItem> _items = [];
+  final List<CarritoItem> _items = [];
 
   List<CarritoItem> get items => _items;
 

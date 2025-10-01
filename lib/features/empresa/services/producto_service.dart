@@ -30,14 +30,14 @@ class ProductoService {
 
     if (snapshot.exists) {
       final productos = <Producto>[];
-      snapshot.children.forEach((child) {
+      for (var child in snapshot.children) {
         productos.add(
           Producto.fromJson(
             Map<String, dynamic>.from(child.value as Map),
             child.key!,
           ),
         );
-      });
+      }
       return productos;
     }
     return [];
@@ -147,14 +147,14 @@ class ProductoService {
     return _dbRef.orderByChild('deleted').equalTo(false).onValue.map((event) {
       final productos = <Producto>[];
       if (event.snapshot.exists) {
-        event.snapshot.children.forEach((child) {
+        for (var child in event.snapshot.children) {
           productos.add(
             Producto.fromJson(
               Map<String, dynamic>.from(child.value as Map),
               child.key!,
             ),
           );
-        });
+        }
       }
       return productos;
     });
@@ -331,14 +331,14 @@ class ProductoService {
 
     if (snapshot.exists) {
       final productos = <Producto>[];
-      snapshot.children.forEach((child) {
+      for (var child in snapshot.children) {
         productos.add(
           Producto.fromJson(
             Map<String, dynamic>.from(child.value as Map),
             child.key!,
           ),
         );
-      });
+      }
       return productos;
     }
     return [];

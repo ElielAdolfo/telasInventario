@@ -9,10 +9,10 @@ class RecepcionProductoScreen extends StatefulWidget {
   final String empresaId;
 
   const RecepcionProductoScreen({
-    Key? key,
+    super.key,
     required this.solicitud,
     required this.empresaId,
-  }) : super(key: key);
+  });
 
   @override
   State<RecepcionProductoScreen> createState() =>

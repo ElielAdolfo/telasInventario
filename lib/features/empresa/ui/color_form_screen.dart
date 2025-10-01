@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 class ColorFormScreen extends StatefulWidget {
   final ColorProducto? color;
 
-  const ColorFormScreen({Key? key, this.color}) : super(key: key);
+  const ColorFormScreen({super.key, this.color});
 
   @override
   State<ColorFormScreen> createState() => _ColorFormScreenState();
@@ -254,10 +254,10 @@ class ColorPicker extends StatefulWidget {
   final ValueChanged<Color> onColorChanged;
 
   const ColorPicker({
-    Key? key,
+    super.key,
     required this.pickerColor,
     required this.onColorChanged,
-  }) : super(key: key);
+  });
 
   @override
   _ColorPickerState createState() => _ColorPickerState();

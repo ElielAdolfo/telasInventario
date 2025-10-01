@@ -14,7 +14,7 @@ import 'deleted_empresas_screen.dart';
 import 'package:inventario/features/empresa/ui/agregar_stock_empresa_screen.dart';
 
 class EmpresaListScreen extends StatelessWidget {
-  const EmpresaListScreen({Key? key}) : super(key: key);
+  const EmpresaListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

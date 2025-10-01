@@ -16,10 +16,10 @@ class DetalleSolicitudScreen extends StatefulWidget {
   final String empresaId;
 
   const DetalleSolicitudScreen({
-    Key? key,
+    super.key,
     required this.solicitud,
     required this.empresaId,
-  }) : super(key: key);
+  });
 
   @override
   State<DetalleSolicitudScreen> createState() => _DetalleSolicitudScreenState();
@@ -36,7 +36,7 @@ class _DetalleSolicitudScreenState extends State<DetalleSolicitudScreen> {
   final _correccionController = TextEditingController();
 
   // Guardar una referencia al contexto global para usarlo en operaciones asíncronas
-  GlobalKey<ScaffoldMessengerState> _scaffoldKey =
+  final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
       GlobalKey<ScaffoldMessengerState>();
 
   // Managers para cargar los datos
@@ -267,10 +267,10 @@ class _DetalleSolicitudScreenState extends State<DetalleSolicitudScreen> {
                       });
                     }
                   },
-                  child: const Text('Editar'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(80, 36),
                   ),
+                  child: const Text('Editar'),
                 ),
             ],
           ),
@@ -414,10 +414,10 @@ class _DetalleSolicitudScreenState extends State<DetalleSolicitudScreen> {
 
                 ElevatedButton(
                   onPressed: _enviarCorreccion,
-                  child: const Text('Enviar Corrección'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                   ),
+                  child: const Text('Enviar Corrección'),
                 ),
               ],
             ),

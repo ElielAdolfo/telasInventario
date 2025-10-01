@@ -10,8 +10,7 @@ import '../logic/tipo_producto_manager.dart';
 
 class TipoProductoDetailScreen extends StatelessWidget {
   final TipoProducto tipoProducto;
-  const TipoProductoDetailScreen({Key? key, required this.tipoProducto})
-    : super(key: key);
+  const TipoProductoDetailScreen({super.key, required this.tipoProducto});
 
   @override
   Widget build(BuildContext context) {
@@ -375,6 +374,8 @@ class TipoProductoDetailScreen extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: productoManager.productos.length,
               itemBuilder: (context, index) {
+                return null;
+
                 /*final producto = productoManager.productos[index];
                 final color = colorManager.colores.firstWhere(
                   (c) => c.id == producto.idColor,

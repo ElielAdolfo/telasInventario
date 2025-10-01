@@ -10,8 +10,7 @@ import '../services/empresa_service.dart';
 
 class EmpresaDashboardScreen extends StatefulWidget {
   final Empresa empresa;
-  const EmpresaDashboardScreen({Key? key, required this.empresa})
-    : super(key: key);
+  const EmpresaDashboardScreen({super.key, required this.empresa});
 
   @override
   _EmpresaDashboardScreenState createState() => _EmpresaDashboardScreenState();

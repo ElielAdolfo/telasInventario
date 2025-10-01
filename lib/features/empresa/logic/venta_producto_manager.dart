@@ -352,7 +352,7 @@ class VentaProductoManager extends ChangeNotifier {
     String colorNombre,
     String idTienda,
   ) async {
-    print("datos: " + nombreProducto + " " + colorNombre + " " + idTienda);
+    print("datos: $nombreProducto $colorNombre $idTienda");
     try {
       // Filtrar los stocks de tienda que coincidan con el nombre y color
 

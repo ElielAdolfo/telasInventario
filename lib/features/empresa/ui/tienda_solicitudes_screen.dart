@@ -12,10 +12,10 @@ class TiendaSolicitudesScreen extends StatefulWidget {
   final String empresaId;
 
   const TiendaSolicitudesScreen({
-    Key? key,
+    super.key,
     required this.tienda,
     required this.empresaId,
-  }) : super(key: key);
+  });
 
   @override
   State<TiendaSolicitudesScreen> createState() =>
@@ -59,8 +59,8 @@ class _TiendaSolicitudesScreenState extends State<TiendaSolicitudesScreen> {
       body: _buildSolicitudesList(),
       floatingActionButton: FloatingActionButton(
         onPressed: _loadSolicitudes,
-        child: const Icon(Icons.refresh),
         tooltip: 'Actualizar',
+        child: const Icon(Icons.refresh),
       ),
     );
   }

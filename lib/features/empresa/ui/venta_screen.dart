@@ -15,8 +15,7 @@ class VentaScreen extends StatelessWidget {
   final String empresaId;
   final Tienda tienda;
 
-  const VentaScreen({Key? key, required this.empresaId, required this.tienda})
-    : super(key: key);
+  const VentaScreen({super.key, required this.empresaId, required this.tienda});
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +34,10 @@ class _VentaScreenContent extends StatefulWidget {
   final Tienda tienda;
 
   const _VentaScreenContent({
-    Key? key,
+    super.key,
     required this.empresaId,
     required this.tienda,
-  }) : super(key: key);
+  });
 
   @override
   __VentaScreenContentState createState() => __VentaScreenContentState();
@@ -269,7 +268,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
       context: context,
       builder: (context) {
         return Dialog(
-          child: Container(
+          child: SizedBox(
             width: MediaQuery.of(context).size.width * 0.8,
             height: MediaQuery.of(context).size.height * 0.6,
             child: Column(
@@ -677,10 +676,10 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     );
                   }
                 },
-                child: Text('Agregar al carrito'),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
+                child: Text('Agregar al carrito'),
               ),
             ],
           );
@@ -846,11 +845,13 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                           ),
                           keyboardType: TextInputType.number,
                           validator: (value) {
-                            if (value == null || value.isEmpty)
+                            if (value == null || value.isEmpty) {
                               return 'Ingrese una cantidad';
+                            }
                             final cantidad = int.tryParse(value);
-                            if (cantidad == null || cantidad <= 0)
+                            if (cantidad == null || cantidad <= 0) {
                               return 'Cantidad inválida';
+                            }
                             if (cantidad > stockTienda.cantidadDisponible) {
                               return 'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
                             }
@@ -1131,10 +1132,10 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     );
                   }
                 },
-                child: Text('Agregar al carrito'),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
+                child: Text('Agregar al carrito'),
               ),
             ],
           );

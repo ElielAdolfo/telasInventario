@@ -6,7 +6,7 @@ import '../logic/unidad_medida_manager.dart';
 import 'unidad_medida_form_screen.dart';
 
 class UnidadMedidaListScreen extends StatefulWidget {
-  const UnidadMedidaListScreen({Key? key}) : super(key: key);
+  const UnidadMedidaListScreen({super.key});
 
   @override
   State<UnidadMedidaListScreen> createState() => _UnidadMedidaListScreenState();

@@ -13,8 +13,11 @@ class CarritoScreen extends StatefulWidget {
   final Tienda tienda;
   final String empresaId;
 
-  const CarritoScreen({Key? key, required this.tienda, required this.empresaId})
-    : super(key: key);
+  const CarritoScreen({
+    super.key,
+    required this.tienda,
+    required this.empresaId,
+  });
 
   @override
   State<CarritoScreen> createState() => _CarritoScreenState();
@@ -289,13 +292,13 @@ class _CarritoScreenState extends State<CarritoScreen>
             height: 50,
             child: ElevatedButton(
               onPressed: () => _confirmarVenta(context, carritoManager),
-              child: const Text('Vender'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
+              child: const Text('Vender'),
             ),
           ),
         ],
@@ -440,39 +443,35 @@ class _CarritoScreenState extends State<CarritoScreen>
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              ...venta.items
-                  .map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: _parseColor(item.codigoColor),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${item.nombreProducto} - ${item.nombreColor}',
-                            ),
-                          ),
-                          Text(
-                            '${item.cantidad} x \$${item.precio.toStringAsFixed(2)}',
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Subtotal: \$${item.subtotal.toStringAsFixed(2)}',
-                          ),
-                        ],
+              ...venta.items.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: _parseColor(item.codigoColor),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey),
+                        ),
                       ),
-                    ),
-                  )
-                  .toList(),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${item.nombreProducto} - ${item.nombreColor}',
+                        ),
+                      ),
+                      Text(
+                        '${item.cantidad} x \$${item.precio.toStringAsFixed(2)}',
+                      ),
+                      const SizedBox(width: 8),
+                      Text('Subtotal: \$${item.subtotal.toStringAsFixed(2)}'),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

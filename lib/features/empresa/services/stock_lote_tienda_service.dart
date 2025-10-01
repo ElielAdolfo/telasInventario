@@ -308,7 +308,7 @@ class StockLoteTiendaService {
       int total = 0;
 
       for (final lote in lotes) {
-        total += await lote.cantidadDisponible; // ✅ Esperamos correctamente
+        total += lote.cantidadDisponible; // ✅ Esperamos correctamente
       }
 
       return total;
@@ -326,7 +326,7 @@ class StockLoteTiendaService {
 
       for (final lote in lotes) {
         if (!lote.estaCerrada) {
-          total += await lote.cantidadVendida; // ✅ AQUÍ el await
+          total += lote.cantidadVendida; // ✅ AQUÍ el await
         }
       }
 

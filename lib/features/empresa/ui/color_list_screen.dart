@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'color_form_screen.dart';
 
 class ColorListScreen extends StatefulWidget {
-  const ColorListScreen({Key? key}) : super(key: key);
+  const ColorListScreen({super.key});
 
   @override
   State<ColorListScreen> createState() => _ColorListScreenState();

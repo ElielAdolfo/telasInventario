@@ -14,10 +14,10 @@ class TiendaListScreen extends StatefulWidget {
   final String empresaId;
   final String empresaNombre;
   const TiendaListScreen({
-    Key? key,
+    super.key,
     required this.empresaId,
     required this.empresaNombre,
-  }) : super(key: key);
+  });
 
   @override
   State<TiendaListScreen> createState() => _TiendaListScreenState();

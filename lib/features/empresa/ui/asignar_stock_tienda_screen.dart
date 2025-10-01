@@ -18,10 +18,10 @@ class AsignarStockTiendaScreen extends StatefulWidget {
   final String empresaNombre;
 
   const AsignarStockTiendaScreen({
-    Key? key,
+    super.key,
     required this.empresaId,
     required this.empresaNombre,
-  }) : super(key: key);
+  });
 
   @override
   State<AsignarStockTiendaScreen> createState() =>
@@ -314,7 +314,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
                       ),
                     ],
                   );
-                }).toList(),
+                }),
               ],
             ),
           ],
@@ -380,7 +380,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
                   ),
                 ],
               );
-            }).toList(),
+            }),
           ],
         ),
       ],

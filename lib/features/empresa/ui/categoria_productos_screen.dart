@@ -8,8 +8,11 @@ import '../logic/tipo_producto_manager.dart';
 class CategoriaProductosScreen extends StatelessWidget {
   final String? idEmpresa;
   final String? empresaNombre;
-  const CategoriaProductosScreen({Key? key, this.idEmpresa, this.empresaNombre})
-    : super(key: key);
+  const CategoriaProductosScreen({
+    super.key,
+    this.idEmpresa,
+    this.empresaNombre,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -139,12 +142,12 @@ class CategoriaDetailScreen extends StatelessWidget {
   final String categoria;
   final List<TipoProducto> productos;
   const CategoriaDetailScreen({
-    Key? key,
+    super.key,
     this.idEmpresa,
     this.empresaNombre,
     required this.categoria,
     required this.productos,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
