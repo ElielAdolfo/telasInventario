@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/ui/empresa_dashboard_screen.dart';
 import 'package:provider/provider.dart';
 import '../models/empresa_model.dart';
@@ -52,6 +53,8 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authManager = Provider.of<AuthManager>(context);
+    final String? userId = authManager.userId;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -146,7 +149,7 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: _saveForm,
+                      onPressed: () => _saveForm(userId),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -167,8 +170,18 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
     );
   }
 
-  void _saveForm() async {
+  void _saveForm(String? userId) async {
     if (_formKey.currentState!.validate()) {
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: No se pudo identificar al usuario'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       setState(() => _isLoading = true);
 
       final empresa = widget.empresa == null
@@ -194,9 +207,9 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
 
       try {
         if (widget.empresa == null) {
-          await manager.addEmpresa(empresa);
+          await manager.addEmpresa(empresa, userId);
         } else {
-          await manager.updateEmpresa(empresa);
+          await manager.updateEmpresa(empresa, userId);
         }
 
         Navigator.pop(context);
@@ -214,6 +227,19 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
   }
 
   void _showDeleteConfirmation(BuildContext context) {
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    final String? userId = authManager.userId;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: No se pudo identificar al usuario'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -233,7 +259,7 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
                 await Provider.of<EmpresaManager>(
                   context,
                   listen: false,
-                ).deleteEmpresa(widget.empresa!.id);
+                ).deleteEmpresa(widget.empresa!.id, userId);
                 Navigator.pop(context);
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(

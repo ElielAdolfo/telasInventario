@@ -1,5 +1,6 @@
 // lib/features/empresa/ui/empresa_list_screen.dart
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/models/empresa_model.dart';
 import 'package:inventario/features/empresa/ui/asignar_stock_tienda_screen.dart';
 import 'package:inventario/features/empresa/ui/color_list_screen.dart';
@@ -251,6 +252,19 @@ class _EmpresaListScreenState extends State<EmpresaListScreen> {
   }
 
   void _showDeleteConfirmation(BuildContext context, Empresa empresa) {
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    final String? userId = authManager.userId;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: No se pudo identificar al usuario'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final manager = Provider.of<EmpresaManager>(context, listen: false);
     showDialog(
       context: context,
@@ -265,7 +279,7 @@ class _EmpresaListScreenState extends State<EmpresaListScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              await manager.deleteEmpresa(empresa.id);
+              await manager.deleteEmpresa(empresa.id, userId);
             },
             child: const Text('Eliminar'),
           ),

@@ -9,8 +9,6 @@ class Empresa {
   final DateTime? deletedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
-
-  // ✅ Nuevos campos para auditoría
   final String? createdBy;
   final String? updatedBy;
   final String? deletedBy;
@@ -73,6 +71,7 @@ class Empresa {
   }
 
   Empresa copyWith({
+    String? id,
     String? nombre,
     String? direccion,
     String? telefono,
@@ -80,14 +79,15 @@ class Empresa {
     String? logoUrl,
     bool? deleted,
     DateTime? deletedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
     String? createdBy,
     String? updatedBy,
     String? deletedBy,
     String? restoredBy,
-    DateTime? createdAt,
   }) {
     return Empresa(
-      id: id,
+      id: id ?? this.id,
       nombre: nombre ?? this.nombre,
       direccion: direccion ?? this.direccion,
       telefono: telefono ?? this.telefono,
@@ -95,8 +95,8 @@ class Empresa {
       logoUrl: logoUrl ?? this.logoUrl,
       deleted: deleted ?? this.deleted,
       deletedAt: deletedAt ?? this.deletedAt,
-      createdAt: createdAt ?? DateTime.now(),
-      updatedAt: DateTime.now(),
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
       deletedBy: deletedBy ?? this.deletedBy,

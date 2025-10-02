@@ -1,18 +1,19 @@
 // lib/features/stock/services/stock_empresa_service.dart
 
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/stock_empresa_model.dart';
 
 class StockEmpresaService extends BaseService {
-
   StockEmpresaService() : super('stock_empresa');
 
-  Future<String> createStockEmpresa(StockEmpresa stock) async {
+  Future<String> createStockEmpresa(StockEmpresa stock, String userId) async {
     final newRef = dbRef.push();
-    await newRef.set(stock.toJson());
+    final newVar = stock.copyWith(
+      deleted: false,
+      createdBy: userId,
+      createdAt: DateTime.now(),
+    );
+    await newRef.set(newVar.toJson());
     return newRef.key!;
   }
 

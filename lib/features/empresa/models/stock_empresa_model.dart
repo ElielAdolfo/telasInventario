@@ -21,6 +21,8 @@ class StockEmpresa {
   final DateTime updatedAt;
   int get cantidadDisponible => cantidad - cantidadReservado - cantidadAprobado;
 
+  final String? createdBy;
+  final String? updatedBy;
   // Campos adicionales copiados de TipoProducto
   final String categoria;
   final String nombre;
@@ -59,6 +61,8 @@ class StockEmpresa {
     required this.requiereColor,
     required this.cantidadesPosibles,
     required this.cantidadPrioritaria,
+    this.createdBy,
+    this.updatedBy,
   });
 
   // Modificado para recibir el ID como parámetro separado
@@ -108,6 +112,8 @@ class StockEmpresa {
       requiereColor: json['requiereColor'] ?? false,
       cantidadesPosibles: cantidadesPosibles,
       cantidadPrioritaria: json['cantidadPrioritaria'] ?? 0,
+      createdBy: json['createdBy'],
+      updatedBy: json['updatedBy'],
     );
   }
 
@@ -132,6 +138,8 @@ class StockEmpresa {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
 
+      'createdBy': createdBy,
+      'updatedBy': updatedBy,
       'categoria': categoria,
       'nombre': nombre,
       'unidadMedida': unidadMedida,
@@ -170,6 +178,8 @@ class StockEmpresa {
     bool? requiereColor,
     List<int>? cantidadesPosibles,
     int? cantidadPrioritaria,
+    String? createdBy,
+    String? updatedBy,
   }) {
     return StockEmpresa(
       id: id ?? this.id,
@@ -199,6 +209,8 @@ class StockEmpresa {
       requiereColor: requiereColor ?? this.requiereColor,
       cantidadesPosibles: cantidadesPosibles ?? this.cantidadesPosibles,
       cantidadPrioritaria: cantidadPrioritaria ?? this.cantidadPrioritaria,
+      createdBy: createdBy ?? this.createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
     );
   }
 
@@ -229,6 +241,8 @@ class StockEmpresa {
       requiereColor: false,
       cantidadesPosibles: [],
       cantidadPrioritaria: 0,
+      createdBy: null,
+      updatedBy: null,
     );
   }
 }

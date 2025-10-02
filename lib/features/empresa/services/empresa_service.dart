@@ -5,9 +5,13 @@ class EmpresaService extends BaseService {
   EmpresaService() : super('companies');
 
   // Crear nueva empresa
-  Future<String> createEmpresa(Empresa empresa) async {
+  Future<String> createEmpresa(Empresa empresa, String userId) async {
     final newRef = dbRef.push();
-    final newEmpresa = empresa.copyWith(deleted: false);// agregar iud usaurio id de usuario
+    final newEmpresa = empresa.copyWith(
+      deleted: false,
+      createdBy: userId, // Agregar el ID del usuario que crea la empresa
+      createdAt: DateTime.now(),
+    ); // agregar iud usaurio id de usuario
     await newRef.set(newEmpresa.toJson());
     return newRef.key!;
   }
@@ -44,8 +48,12 @@ class EmpresaService extends BaseService {
   }
 
   // Actualizar empresa
-  Future<void> updateEmpresa(Empresa empresa) async {
-    await dbRef.child(empresa.id).update(empresa.toJson());
+  Future<void> updateEmpresa(Empresa empresa, String userId) async {
+    final updatedEmpresa = empresa.copyWith(
+      updatedBy: userId, // Agregar el ID del usuario que actualiza la empresa
+      updatedAt: DateTime.now(),
+    );
+    await dbRef.child(empresa.id).update(updatedEmpresa.toJson());
   }
 
   // Stream para empresas activas
@@ -85,19 +93,21 @@ class EmpresaService extends BaseService {
   }
 
   // Modificar el método deleteEmpresa para incluir la fecha de eliminación
-  Future<void> deleteEmpresa(String id) async {
+  Future<void> deleteEmpresa(String id, String userId) async {
     await dbRef.child(id).update({
       'deleted': true,
       'deletedAt': DateTime.now().toIso8601String(),
+      'deletedBy': userId,
       'updatedAt': DateTime.now().toIso8601String(),
     });
   }
 
   // Modificar el método restoreEmpresa para limpiar la fecha de eliminación
-  Future<void> restoreEmpresa(String id) async {
+  Future<void> restoreEmpresa(String id, String userId) async {
     await dbRef.child(id).update({
       'deleted': false,
       'deletedAt': null,
+      'restoredBy': userId,
       'updatedAt': DateTime.now().toIso8601String(),
     });
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/models/tienda_model.dart';
 import 'package:inventario/features/empresa/services/tienda_service.dart';
 import 'package:inventario/features/empresa/ui/empresa_form_screen.dart';
@@ -79,6 +80,8 @@ class _EmpresaDashboardScreenState extends State<EmpresaDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authManager = Provider.of<AuthManager>(context);
+    final String? userId = authManager.userId;
     return Scaffold(
       appBar: AppBar(
         title: Text('Dashboard: ${widget.empresa.nombre}'),
@@ -419,6 +422,20 @@ class _EmpresaDashboardScreenState extends State<EmpresaDashboardScreen> {
   }
 
   void _showDeleteConfirmation(BuildContext context) {
+    
+    final authManager = Provider.of<AuthManager>(context);
+    final String? userId = authManager.userId;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: No se pudo identificar al usuario'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -436,7 +453,7 @@ class _EmpresaDashboardScreenState extends State<EmpresaDashboardScreen> {
                 await Provider.of<EmpresaManager>(
                   context,
                   listen: false,
-                ).deleteEmpresa(widget.empresa.id);
+                ).deleteEmpresa(widget.empresa.id, userId);
                 Navigator.pop(context);
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(

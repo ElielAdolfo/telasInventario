@@ -49,12 +49,12 @@ class EmpresaManager with ChangeNotifier {
   }
 
   // Agregar nueva empresa
-  Future<void> addEmpresa(Empresa empresa) async {
+  Future<void> addEmpresa(Empresa empresa, String userId) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      await _service.createEmpresa(empresa);
+      await _service.createEmpresa(empresa, userId);
       await loadEmpresas(); // Recargar lista
     } catch (e) {
       _error = e.toString();
@@ -65,12 +65,12 @@ class EmpresaManager with ChangeNotifier {
   }
 
   // Actualizar empresa existente
-  Future<void> updateEmpresa(Empresa empresa) async {
+  Future<void> updateEmpresa(Empresa empresa, String userId) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      await _service.updateEmpresa(empresa);
+      await _service.updateEmpresa(empresa, userId);
       await loadEmpresas(); // Recargar lista
     } catch (e) {
       _error = e.toString();
@@ -93,12 +93,12 @@ class EmpresaManager with ChangeNotifier {
       _service.deletedEmpresasStream();
 
   // Modificar los métodos deleteEmpresa y restoreEmpresa para usar los nuevos métodos del servicio
-  Future<void> deleteEmpresa(String id) async {
+  Future<void> deleteEmpresa(String id, String userId) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      await _service.deleteEmpresa(id);
+      await _service.deleteEmpresa(id, userId);
       await loadEmpresas(); // Recargar lista activas
       await loadDeletedEmpresas(); // Recargar lista eliminadas
     } catch (e) {
@@ -109,12 +109,12 @@ class EmpresaManager with ChangeNotifier {
     }
   }
 
-  Future<void> restoreEmpresa(String id) async {
+  Future<void> restoreEmpresa(String id, String userId) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      await _service.restoreEmpresa(id);
+      await _service.restoreEmpresa(id, userId);
       await loadEmpresas(); // Recargar lista activas
       await loadDeletedEmpresas(); // Recargar lista eliminadas
     } catch (e) {

@@ -29,12 +29,12 @@ class StockEmpresaManager with ChangeNotifier {
     }
   }
 
-  Future<void> addStockEmpresa(StockEmpresa stock) async {
+  Future<void> addStockEmpresa(StockEmpresa stock, String userId) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      await _service.createStockEmpresa(stock);
+      await _service.createStockEmpresa(stock,userId);
       await loadStockByEmpresa(stock.idEmpresa);
     } catch (e) {
       _error = e.toString();

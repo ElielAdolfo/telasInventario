@@ -1,6 +1,7 @@
 // lib/features/stock/ui/agregar_stock_empresa_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
 import 'package:inventario/features/empresa/logic/stock_empresa_manager.dart';
 import 'package:inventario/features/empresa/logic/tipo_producto_manager.dart';
@@ -115,8 +116,18 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     }
   }
 
-  void _guardarStock() async {
+  void _guardarStock(String? userId) async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: No se pudo identificar al usuario'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     if (_tipoProductoSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -177,7 +188,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     );
 
     try {
-      await stockManager.addStockEmpresa(nuevoStock);
+      await stockManager.addStockEmpresa(nuevoStock,userId);
 
       if (mounted) {
         Navigator.pop(context);
@@ -202,6 +213,8 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authManager = Provider.of<AuthManager>(context);
+    final String? userId = authManager.userId;
     return Scaffold(
       appBar: AppBar(title: Text('Agregar Stock - ${widget.empresaNombre}')),
       body: Form(
@@ -566,7 +579,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _guardarStock,
+                  onPressed: () => _guardarStock(userId),
                   child: const Text('Guardar Stock'),
                 ),
               ),

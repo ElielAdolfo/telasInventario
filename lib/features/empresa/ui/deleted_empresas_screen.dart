@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/models/empresa_model.dart';
 import 'package:provider/provider.dart';
 import '../logic/empresa_manager.dart';
@@ -8,6 +9,8 @@ class DeletedEmpresasScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authManager = Provider.of<AuthManager>(context);
+    final String? userId = authManager.userId;
     return Scaffold(
       appBar: AppBar(title: const Text('Empresas Eliminadas')),
       body: Consumer<EmpresaManager>(
@@ -37,7 +40,8 @@ class DeletedEmpresasScreen extends StatelessWidget {
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.restore),
-                    onPressed: () => _showRestoreConfirmation(context, empresa),
+                    onPressed: () =>
+                        _showRestoreConfirmation(context, empresa, userId),
                     tooltip: 'Restaurar empresa',
                   ),
                 );
@@ -49,7 +53,20 @@ class DeletedEmpresasScreen extends StatelessWidget {
     );
   }
 
-  void _showRestoreConfirmation(BuildContext context, Empresa empresa) {
+  void _showRestoreConfirmation(
+    BuildContext context,
+    Empresa empresa,
+    String? userId,
+  ) async {
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: No se pudo identificar al usuario'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -65,7 +82,7 @@ class DeletedEmpresasScreen extends StatelessWidget {
               Provider.of<EmpresaManager>(
                 context,
                 listen: false,
-              ).restoreEmpresa(empresa.id);
+              ).restoreEmpresa(empresa.id, userId);
               Navigator.pop(context);
             },
             child: const Text('Restaurar'),
