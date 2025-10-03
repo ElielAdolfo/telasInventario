@@ -37,6 +37,7 @@ class SolicitudTraslado {
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
+  final double? precioPaquete; // Nuevo campo: precio por paquete
   final String? lote;
   final DateTime? fechaVencimiento;
   final String? colorNombre;
@@ -46,6 +47,13 @@ class SolicitudTraslado {
   final String? idTipoProducto;
   final String? idColor;
 
+  // Campos de auditoría
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final String? createdBy;
+  final String? updatedBy;
+  final String? deletedBy;
   SolicitudTraslado({
     required this.id,
     required this.idEmpresa,
@@ -81,6 +89,7 @@ class SolicitudTraslado {
     required this.precioCompra,
     required this.precioVentaMenor,
     required this.precioVentaMayor,
+    this.precioPaquete, // Nuevo campo
     required this.lote,
     required this.fechaVencimiento,
     required this.colorNombre,
@@ -88,6 +97,13 @@ class SolicitudTraslado {
     // IDs para referencia
     this.idTipoProducto,
     this.idColor,
+    // Campos de auditoría
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    this.createdBy,
+    this.updatedBy,
+    this.deletedBy,
   });
 
   factory SolicitudTraslado.fromJson(Map<String, dynamic> json, String id) {
@@ -141,6 +157,7 @@ class SolicitudTraslado {
       precioCompra: (json['precioCompra'] ?? 0).toDouble(),
       precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
       precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
+      precioPaquete: json['precioPaquete']?.toDouble(), // Nuevo campo
       lote: json['lote'],
       fechaVencimiento: json['fechaVencimiento'] != null
           ? DateTime.parse(json['fechaVencimiento'])
@@ -150,6 +167,19 @@ class SolicitudTraslado {
       // IDs para referencia
       idTipoProducto: json['idTipoProducto'],
       idColor: json['idColor'],
+      // Campos de auditoría
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : DateTime.now(),
+      deletedAt: json['deletedAt'] != null
+          ? DateTime.parse(json['deletedAt'])
+          : null,
+      createdBy: json['createdBy'],
+      updatedBy: json['updatedBy'],
+      deletedBy: json['deletedBy'],
     );
   }
 
@@ -188,6 +218,7 @@ class SolicitudTraslado {
       'precioCompra': precioCompra,
       'precioVentaMenor': precioVentaMenor,
       'precioVentaMayor': precioVentaMayor,
+      'precioPaquete': precioPaquete, // Nuevo campo
       'lote': lote,
       'fechaVencimiento': fechaVencimiento?.toIso8601String(),
       'colorNombre': colorNombre,
@@ -195,6 +226,13 @@ class SolicitudTraslado {
       // IDs para referencia
       'idTipoProducto': idTipoProducto,
       'idColor': idColor,
+      // Campos de auditoría
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'deletedAt': deletedAt?.toIso8601String(),
+      'createdBy': createdBy,
+      'updatedBy': updatedBy,
+      'deletedBy': deletedBy,
     };
   }
 
@@ -226,6 +264,7 @@ class SolicitudTraslado {
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
+    double? precioPaquete, // Nuevo campo
     String? lote,
     DateTime? fechaVencimiento,
     String? colorNombre,
@@ -233,6 +272,13 @@ class SolicitudTraslado {
     // IDs para referencia
     String? idTipoProducto,
     String? idColor,
+    // Campos de auditoría
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? deletedAt,
+    String? createdBy,
+    String? updatedBy,
+    String? deletedBy,
   }) {
     return SolicitudTraslado(
       id: id,
@@ -271,6 +317,7 @@ class SolicitudTraslado {
       precioCompra: precioCompra ?? this.precioCompra,
       precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
       precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
+      precioPaquete: precioPaquete ?? this.precioPaquete, // Nuevo campo
       lote: lote ?? this.lote,
       fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
       colorNombre: colorNombre ?? this.colorNombre,
@@ -278,6 +325,13 @@ class SolicitudTraslado {
       // IDs para referencia
       idTipoProducto: idTipoProducto ?? this.idTipoProducto,
       idColor: idColor ?? this.idColor,
+      // Campos de auditoría
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      createdBy: createdBy ?? this.createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
+      deletedBy: deletedBy ?? this.deletedBy,
     );
   }
 }

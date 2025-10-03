@@ -1,6 +1,7 @@
 // lib/features/stock/ui/asignar_stock_tienda_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
 import 'package:inventario/features/empresa/logic/solicitud_traslado_manager.dart';
 import 'package:inventario/features/empresa/logic/stock_empresa_manager.dart';
@@ -45,10 +46,15 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
 
   // Controlador para observaciones
   final _observacionesController = TextEditingController();
+  late final String? _userId;
 
   @override
   void initState() {
     super.initState();
+
+    // Obtener el ID del usuario actual
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    _userId = authManager.userId;
 
     // Cargar datos necesarios
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -576,9 +582,8 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           fechaSolicitud: DateTime.now(),
           motivo: _observacionesController.text.isNotEmpty
               ? _observacionesController.text
-              : null,
-          solicitadoPor:
-              'usuario_actual', // Debe obtenerse del sistema de autenticación
+              : null,          
+              solicitadoPor: _userId ?? 'usuario_actual', // Usar el ID del usuario actual
           // No se establece aprobadoPor ni fechaAprobacion hasta que se apruebe
 
           // Campos copiados de StockEmpresa para mantener un registro histórico
@@ -593,10 +598,19 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           precioCompra: stock.precioCompra,
           precioVentaMenor: stock.precioVentaMenor,
           precioVentaMayor: stock.precioVentaMayor,
+          precioPaquete: stock.precioPaquete, // Nuevo campo: precio por paquete
           lote: stock.lote,
           fechaVencimiento: stock.fechaVencimiento,
           colorNombre: _colorSeleccionado?.nombreColor,
           colorCodigo: _colorSeleccionado?.codigoColor,
+          
+          // Campos de auditoría
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          createdBy: _userId,
+          updatedBy: _userId,
+          deletedAt: null,
+          deletedBy: null,
         );
 
         final resultado = await context

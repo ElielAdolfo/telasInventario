@@ -1,6 +1,7 @@
 // lib/features/venta/ui/carrito_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/carrito_manager.dart';
 import 'package:inventario/features/empresa/logic/venta_manager.dart';
 import 'package:inventario/features/empresa/models/carrito_item_model.dart';
@@ -26,15 +27,19 @@ class CarritoScreen extends StatefulWidget {
 class _CarritoScreenState extends State<CarritoScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late final String? _userId;
+  bool _mostrarTodasLasVentas = false;
 
   @override
   void initState() {
     super.initState();
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    _userId = authManager.userId;
     _tabController = TabController(length: 2, vsync: this);
 
     // Cargar ventas al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<VentaManager>().loadVentasByTienda(widget.tienda.id);
+      _cargarVentas();
     });
   }
 
@@ -42,6 +47,21 @@ class _CarritoScreenState extends State<CarritoScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // Método para cargar las ventas según el estado del switch
+  void _cargarVentas() {
+    if (_mostrarTodasLasVentas) {
+      // Cargar todas las ventas de la tienda
+      context.read<VentaManager>().loadVentasByTienda(widget.tienda.id);
+    } else {
+      // Cargar solo las ventas del usuario actual del día
+      context.read<VentaManager>().loadVentasByTiendaAndUserAndDate(
+        widget.tienda.id,
+        _userId ?? '',
+        DateTime.now(),
+      );
+    }
   }
 
   @override
@@ -128,15 +148,57 @@ class _CarritoScreenState extends State<CarritoScreen>
           return const Center(child: Text('No hay ventas registradas'));
         }
 
-        return RefreshIndicator(
-          onRefresh: () => ventaManager.loadVentasByTienda(widget.tienda.id),
-          child: ListView.builder(
-            itemCount: ventaManager.ventas.length,
-            itemBuilder: (context, index) {
-              final venta = ventaManager.ventas[index];
-              return _buildVentaCard(venta);
-            },
-          ),
+        return Column(
+          children: [
+            // Switch para filtrar ventas
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _mostrarTodasLasVentas
+                          ? 'Mostrando todas las ventas'
+                          : 'Mostrando tus ventas de hoy',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Switch(
+                    value: _mostrarTodasLasVentas,
+                    onChanged: (value) {
+                      setState(() {
+                        _mostrarTodasLasVentas = value;
+                        _cargarVentas(); // Recargar datos cuando cambia el switch
+                      });
+                    },
+                    activeColor: Theme.of(context).primaryColor,
+                  ),
+                ],
+              ),
+            ),
+            // Lista de ventas
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  _cargarVentas();
+                },
+                child: ListView.builder(
+                  itemCount: ventaManager.ventas.length,
+                  itemBuilder: (context, index) {
+                    final venta = ventaManager.ventas[index];
+                    return _buildVentaCard(venta);
+                  },
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -340,7 +402,7 @@ class _CarritoScreenState extends State<CarritoScreen>
     );
 
     // Obtener el usuario actual (aquí deberías obtenerlo de tu sistema de autenticación)
-    final usuario = 'usuario_actual'; // Reemplazar con el usuario real
+    final usuario = _userId ?? 'usuario_desconocido';
 
     // Crear la venta con todos los detalles necesarios
     final venta = Venta(
@@ -350,6 +412,11 @@ class _CarritoScreenState extends State<CarritoScreen>
       fechaVenta: DateTime.now(),
       total: carritoManager.total,
       realizadoPor: usuario,
+      // Campos de auditoría
+      createdAt: DateTime.now(),
+      createdBy: usuario,
+      updatedAt: DateTime.now(),
+      updatedBy: usuario,
       items: carritoManager.items
           .map(
             (item) => VentaItem(
@@ -365,11 +432,15 @@ class _CarritoScreenState extends State<CarritoScreen>
               idStockTienda: item.idStockTienda,
               idStockUnidadAbierta: item.idStockUnidadAbierta,
               idStockLoteTienda: item.idStockLoteTienda,
+              // Campos de auditoría
+              createdAt: DateTime.now(),
+              createdBy: usuario,
+              updatedAt: DateTime.now(),
+              updatedBy: usuario,
             ),
           )
           .toList(),
       deleted: false,
-      updatedAt: DateTime.now().toIso8601String(),
     );
 
     // Registrar la venta
@@ -437,6 +508,11 @@ class _CarritoScreenState extends State<CarritoScreen>
               Text('Fecha: ${_formatDate(venta.fechaVenta)}'),
               Text('Total: \$${venta.total.toStringAsFixed(2)}'),
               Text('Realizado por: ${venta.realizadoPor}'),
+              // Mostrar información de auditoría
+              if (venta.createdBy != null)
+                Text('Creado por: ${venta.createdBy}'),
+              if (venta.updatedBy != null)
+                Text('Actualizado por: ${venta.updatedBy}'),
               const SizedBox(height: 16),
               const Text(
                 'Productos:',

@@ -35,6 +35,47 @@ class VentaManager extends ChangeNotifier {
     }
   }
 
+  // Nuevo método para cargar ventas por tienda y fecha
+  Future<void> loadVentasByTiendaAndDate(String idTienda, DateTime fecha) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _ventas = await _ventaService.getVentasByTiendaAndDate(idTienda, fecha);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Método para cargar ventas por tienda, usuario y fecha
+  Future<void> loadVentasByTiendaAndUserAndDate(
+    String idTienda,
+    String idUsuario,
+    DateTime fecha,
+  ) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _ventas = await _ventaService.getVentasByTiendaAndUsuarioAndFecha(
+        idTienda,
+        idUsuario,
+        fecha,
+      );
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+
   Future<bool> registrarVenta(Venta venta) async {
     _isLoading = true;
     _error = null;
@@ -51,7 +92,8 @@ class VentaManager extends ChangeNotifier {
         realizadoPor: venta.realizadoPor,
         items: venta.items,
         deleted: false,
-        updatedAt: DateTime.now().toIso8601String(),
+        updatedAt: DateTime.now(),
+        createdAt: DateTime.now(),
       );
 
       // Registrar la venta

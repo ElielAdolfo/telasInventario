@@ -1,6 +1,7 @@
 // lib/features/empresa/ui/venta_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/models/carrito_item_model.dart';
 import 'package:provider/provider.dart';
 import '../logic/venta_producto_manager.dart';
@@ -44,9 +45,12 @@ class _VentaScreenContent extends StatefulWidget {
 }
 
 class __VentaScreenContentState extends State<_VentaScreenContent> {
+  late final String? _userId;
   @override
   void initState() {
     super.initState();
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    _userId = authManager.userId;
     // Cargar datos iniciales
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<VentaProductoManager>().cargarDatosIniciales(
@@ -492,6 +496,9 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     // Variable para el subtotal
     double subtotal = precioInicial;
 
+    // Variable para controlar si se usa precio por mayor
+    bool usarPrecioPorMayor = false;
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -503,6 +510,37 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
             setState(() {
               subtotal = cantidad * precio;
             });
+          }
+
+          // Cambiar entre precio normal y precio por mayor
+          void togglePrecioPorMayor(bool valor) {
+            setState(() {
+              usarPrecioPorMayor = valor;
+              if (valor) {
+                // Usar precio por mayor
+                precioController.text = stock.precioVentaMayor.toStringAsFixed(
+                  2,
+                );
+              } else {
+                // Usar precio normal
+                precioController.text = stock.precioVentaMenor.toStringAsFixed(
+                  2,
+                );
+              }
+              calcularSubtotal();
+            });
+          }
+
+          // Verificar si se debe activar automáticamente el precio por mayor
+          void verificarActivacionPrecioPorMayor() {
+            final cantidad = int.tryParse(cantidadController.text) ?? 0;
+            if (cantidad >= 10 && !usarPrecioPorMayor) {
+              // Activar automáticamente si la cantidad es 10 o más
+              togglePrecioPorMayor(true);
+            } else if (cantidad < 10 && usarPrecioPorMayor) {
+              // Desactivar automáticamente si la cantidad es menor a 10
+              togglePrecioPorMayor(false);
+            }
           }
 
           return AlertDialog(
@@ -559,6 +597,17 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                           'Fecha de apertura:',
                           lote.fechaApertura.toString().substring(0, 10),
                         ),
+                        // Mostrar precios de referencia
+                        _buildInfoRow(
+                          'Precio normal:',
+                          '\$${stock.precioVentaMenor.toStringAsFixed(2)}',
+                          color: Colors.blue,
+                        ),
+                        _buildInfoRow(
+                          'Precio por mayor (10+):',
+                          '\$${stock.precioVentaMayor.toStringAsFixed(2)}',
+                          color: Colors.green,
+                        ),
                       ],
                     ),
 
@@ -575,9 +624,14 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                                 'Cantidad (${stock.unidadMedidaSecundaria})',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.inventory_2),
+                            helperText:
+                                'Al ingresar 10 o más unidades, se aplicará precio por mayor automáticamente',
                           ),
                           keyboardType: TextInputType.number,
-                          onChanged: (value) => calcularSubtotal(),
+                          onChanged: (value) {
+                            calcularSubtotal();
+                            verificarActivacionPrecioPorMayor();
+                          },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Ingrese una cantidad';
@@ -593,29 +647,82 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                           },
                         ),
                         SizedBox(height: 12),
-                        TextFormField(
-                          controller: precioController,
-                          decoration: InputDecoration(
-                            labelText:
-                                'Precio por ${stock.unidadMedidaSecundaria}',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.attach_money),
-                            suffixText: 'Bs',
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          onChanged: (value) => calcularSubtotal(),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Ingrese un precio';
-                            }
-                            final precio = double.tryParse(value);
-                            if (precio == null || precio <= 0) {
-                              return 'Ingrese un precio válido';
-                            }
-                            return null;
-                          },
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: precioController,
+                                decoration: InputDecoration(
+                                  labelText:
+                                      'Precio por ${stock.unidadMedidaSecundaria}',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.attach_money),
+                                  suffixText: 'Bs',
+                                ),
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                onChanged: (value) => calcularSubtotal(),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Ingrese un precio';
+                                  }
+                                  final precio = double.tryParse(value);
+                                  if (precio == null || precio <= 0) {
+                                    return 'Ingrese un precio válido';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Container(
+                              width: 60,
+                              height: 60,
+                              child: InkWell(
+                                onTap: () =>
+                                    togglePrecioPorMayor(!usarPrecioPorMayor),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: usarPrecioPorMayor
+                                        ? Theme.of(context).primaryColor
+                                        : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: usarPrecioPorMayor
+                                          ? Theme.of(context).primaryColor
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        usarPrecioPorMayor
+                                            ? Icons.check_circle
+                                            : Icons.circle_outlined,
+                                        color: usarPrecioPorMayor
+                                            ? Colors.white
+                                            : Colors.grey,
+                                        size: 20,
+                                      ),
+                                      Text(
+                                        'Mayor',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: usarPrecioPorMayor
+                                              ? Colors.white
+                                              : Colors.grey,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         SizedBox(height: 12),
                         _buildInfoRow(
@@ -659,6 +766,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                       tipoVenta: 'UNIDAD_ABIERTA',
                       idStockLoteTienda:
                           lote.id, // Guardamos referencia al lote
+                      idUsuario: _userId ?? 'usuario_desconocido',
                     );
 
                     // Agregar al carrito
@@ -886,7 +994,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     final resultado = await manager.abrirUnidad(
                       stockTienda.id,
                       cantidad,
-                      'usuario_actual', // Esto debería ser el usuario actual
+                      _userId!, // Esto debería ser el usuario actual
                       widget.tienda.id,
                     );
 
@@ -943,8 +1051,10 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     final TextEditingController precioController = TextEditingController();
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-    // Calcular precio inicial (cantidadPrioritaria * precioVentaMenor)
-    final precioInicial = stock.cantidadPrioritaria * stock.precioVentaMenor;
+    // CORREGIDO: Usar precioPaquete en lugar de calcular con cantidadPrioritaria
+    final precioInicial =
+        stock.precioPaquete ??
+        -1; //stock.cantidadPrioritaria * stock.precioVentaMenor;
     precioController.text = precioInicial.toStringAsFixed(2);
 
     // Variable para el subtotal
@@ -1016,6 +1126,13 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                         _buildInfoRow(
                           'Fecha de ingreso:',
                           stock.fechaIngresoStock.toString().substring(0, 10),
+                        ),
+                        // AGREGADO: Mostrar precioPaquete
+                        _buildInfoRow(
+                          'Precio por paquete:',
+                          '\$${stock.precioPaquete?.toStringAsFixed(2) ?? "N/A"}',
+                          isBold: true,
+                          color: Colors.green,
                         ),
                       ],
                     ),
@@ -1115,6 +1232,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                       tipoVenta: 'UNIDAD_COMPLETA',
                       idStockTienda:
                           stockTienda.id, // Guardamos referencia al stock
+                      idUsuario: _userId ?? 'usuario_desconocido',
                     );
 
                     // Agregar al carrito (sin vender todavía)

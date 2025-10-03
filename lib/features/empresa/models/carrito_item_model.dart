@@ -17,6 +17,7 @@ class CarritoItem {
   final String? idStockLoteTienda; // ID del lote si es por unidad completa
   final String?
   idStockUnidadAbierta; // ID de la unidad abierta si es por unidad abierta
+  final String idUsuario;
 
   CarritoItem({
     required this.id,
@@ -31,6 +32,7 @@ class CarritoItem {
     this.idStockLoteTienda,
     this.idStockTienda,
     this.idStockUnidadAbierta,
+    required this.idUsuario, // Nuevo campo
   }) : subtotal = precio * cantidad;
 
   void actualizarCantidad(int nuevaCantidad) {
@@ -52,6 +54,7 @@ class CarritoItem {
     String? tipoVenta,
     String? idStockLoteTienda,
     String? idStockUnidadAbierta,
+    String? idUsuario, // Nuevo parámetro
   }) {
     return CarritoItem(
       id: id ?? this.id,
@@ -65,6 +68,7 @@ class CarritoItem {
       tipoVenta: tipoVenta ?? this.tipoVenta,
       idStockLoteTienda: idStockLoteTienda ?? this.idStockLoteTienda,
       idStockUnidadAbierta: idStockUnidadAbierta ?? this.idStockUnidadAbierta,
+      idUsuario: idUsuario ?? this.idUsuario, // Nuevo campo
     );
   }
 
@@ -84,7 +88,8 @@ class CarritoItem {
         'tipoVenta: $tipoVenta, '
         'idStockTienda: $idStockTienda, '
         'idStockLoteTienda: $idStockLoteTienda, '
-        'idStockUnidadAbierta: $idStockUnidadAbierta'
+        'idStockUnidadAbierta: $idStockUnidadAbierta, '
+        'idUsuario: $idUsuario' // Nuevo campo
         ')';
   }
 }

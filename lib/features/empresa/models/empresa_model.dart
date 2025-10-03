@@ -6,12 +6,14 @@ class Empresa {
   final String ruc;
   final String logoUrl;
   final bool deleted;
+
   final DateTime? deletedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
   final String? updatedBy;
   final String? deletedBy;
+  
   final String? restoredBy;
 
   Empresa({

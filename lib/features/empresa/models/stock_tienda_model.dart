@@ -12,6 +12,7 @@ class StockTienda {
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
+  final double? precioPaquete; // Nuevo campo: precio por paquete
   final DateTime fechaIngresoStock;
   final String? idSolicitudTraslado;
   final bool deleted;
@@ -47,6 +48,7 @@ class StockTienda {
     required this.precioCompra,
     required this.precioVentaMenor,
     required this.precioVentaMayor,
+    this.precioPaquete, // Nuevo campo: precio por paquete
     required this.fechaIngresoStock,
     this.idSolicitudTraslado,
     this.deleted = false,
@@ -93,6 +95,7 @@ class StockTienda {
       precioCompra: (json['precioCompra'] ?? 0).toDouble(),
       precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
       precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
+      precioPaquete: json['precioPaquete']?.toDouble(), // Nuevo campo
       fechaIngresoStock: DateTime.parse(json['fechaIngresoStock']),
       idSolicitudTraslado: json['idSolicitudTraslado'],
       deleted: json['deleted'] ?? false,
@@ -129,6 +132,7 @@ class StockTienda {
       'precioCompra': precioCompra,
       'precioVentaMenor': precioVentaMenor,
       'precioVentaMayor': precioVentaMayor,
+      'precioPaquete': precioPaquete, // Nuevo campo
       'fechaIngresoStock': fechaIngresoStock.toIso8601String(),
       'idSolicitudTraslado': idSolicitudTraslado,
       'deleted': deleted,
@@ -163,6 +167,7 @@ class StockTienda {
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
+    double? precioPaquete, // Nuevo parámetro
     DateTime? fechaIngresoStock,
     String? idSolicitudTraslado,
     bool? deleted,
@@ -195,6 +200,7 @@ class StockTienda {
       precioCompra: precioCompra ?? this.precioCompra,
       precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
       precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
+      precioPaquete: precioPaquete ?? this.precioPaquete, // Nuevo campo
       fechaIngresoStock: fechaIngresoStock ?? this.fechaIngresoStock,
       idSolicitudTraslado: idSolicitudTraslado ?? this.idSolicitudTraslado,
       deleted: deleted ?? this.deleted,
@@ -231,6 +237,7 @@ class StockTienda {
       precioCompra: 0,
       precioVentaMenor: 0,
       precioVentaMayor: 0,
+      precioPaquete: 0, // Nuevo campo
       fechaIngresoStock: DateTime.now(),
       idSolicitudTraslado: '',
       deleted: false,
@@ -269,6 +276,7 @@ class StockTienda {
         'precioCompra: $precioCompra, '
         'precioVentaMenor: $precioVentaMenor, '
         'precioVentaMayor: $precioVentaMayor, '
+        'precioPaquete: $precioPaquete, ' // Nuevo campo
         'unidadMedida: $unidadMedida, '
         'unidadMedidaSecundaria: $unidadMedidaSecundaria, '
         'permiteVentaParcial: $permiteVentaParcial, '

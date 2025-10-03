@@ -1,5 +1,6 @@
 // lib/features/producto/ui/tipo_producto_selection_screen.dart
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/ui/unidad_medida_list_screen.dart';
 import 'package:provider/provider.dart';
 import '../models/tipo_producto_model.dart';
@@ -26,175 +27,187 @@ class TipoProductoSelectionScreen extends StatefulWidget {
 
 class _TipoProductoSelectionScreenState
     extends State<TipoProductoSelectionScreen> {
-  // Guardar una referencia al manager para evitar problemas de contexto
   late TipoProductoManager _tipoProductoManager;
+  late UnidadMedidaManager _unidadMedidaManager;
+
+  late final String? _userId;
+
+  // Variable para verificar si el widget está montado
+  bool _mounted = true;
+
+  // Variables para controlar la carga de datos
+  bool _isLoading = true;
+  String? _error;
+  List<TipoProducto> _tiposProducto = [];
+  List<UnidadMedida> _unidadesMedida = [];
 
   @override
   void initState() {
     super.initState();
+    _mounted = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UnidadMedidaManager>(
-        context,
-        listen: false,
-      ).loadUnidadesMedida();
-      // Cargar tipos de producto por empresa si se proporciona idEmpresa
-      if (widget.idEmpresa != null) {
-        Provider.of<TipoProductoManager>(
-          context,
-          listen: false,
-        ).loadTiposProductoByEmpresa(widget.idEmpresa!);
-      }
+      _cargarDatosIniciales(); // Se asigna una sola vez
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    _userId = authManager.userId;
+  }
+
+  @override
+  void dispose() {
+    _mounted = false;
+    super.dispose();
+  }
+
+  Future<void> _cargarDatosIniciales() async {
+    if (!_mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Obtener referencias a los managers
       _tipoProductoManager = Provider.of<TipoProductoManager>(
         context,
         listen: false,
       );
+      _unidadMedidaManager = Provider.of<UnidadMedidaManager>(
+        context,
+        listen: false,
+      );
+
+      // Cargar unidades de medida
+      await _unidadMedidaManager.loadUnidadesMedida();
+
       // Cargar tipos de producto por empresa si se proporciona idEmpresa
       if (widget.idEmpresa != null) {
-        _tipoProductoManager.loadTiposProductoByEmpresa(widget.idEmpresa!);
+        await _tipoProductoManager.loadTiposProductoByEmpresa(
+          widget.idEmpresa!,
+        );
       }
-    });
+
+      if (_mounted) {
+        setState(() {
+          _tiposProducto = _tipoProductoManager.tiposProducto;
+          _unidadesMedida = _unidadMedidaManager.unidadesMedida;
+          _error = _tipoProductoManager.error ?? _unidadMedidaManager.error;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (_mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _recargarDatos() async {
+    await _cargarDatosIniciales();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<TipoProductoManager>(
-          create: (_) => TipoProductoManager(),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.empresaNombre != null
+              ? 'Tipos de Producto - ${widget.empresaNombre}'
+              : 'Tipos de Productos',
         ),
-        ChangeNotifierProvider<UnidadMedidaManager>(
-          create: (_) => UnidadMedidaManager(),
-        ),
-      ],
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            widget.empresaNombre != null
-                ? 'Tipos de Producto - ${widget.empresaNombre}'
-                : 'Tipos de Productos',
-          ),
-          actions: [
-            if (widget.idEmpresa == null)
-              IconButton(
-                icon: const Icon(Icons.business),
-                onPressed: () => _navigateToEmpresas(context),
-                tooltip: 'Ir a Empresas',
-              ),
+        actions: [
+          if (widget.idEmpresa == null)
             IconButton(
-              icon: const Icon(Icons.category),
-              onPressed: () => _navigateToCategorias(context),
-              tooltip: 'Ver Categorías',
+              icon: const Icon(Icons.business),
+              onPressed: () => _navigateToEmpresas(context),
+              tooltip: 'Ir a Empresas',
+            ),
+          IconButton(
+            icon: const Icon(Icons.category),
+            onPressed: () => _navigateToCategorias(context),
+            tooltip: 'Ver Categorías',
+          ),
+        ],
+      ),
+      body: _buildBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddTipoProductoDialog(context),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _recargarDatos,
+              child: const Text('Reintentar'),
             ),
           ],
         ),
-        body: Consumer2<TipoProductoManager, UnidadMedidaManager>(
-          builder: (context, tipoProductoManager, unidadMedidaManager, child) {
-            // Actualizar las referencias a los managers
-            _tipoProductoManager = tipoProductoManager;
-            unidadMedidaManager = unidadMedidaManager;
-            // Cargar tipos de producto por empresa si se proporciona idEmpresa
-            if (widget.idEmpresa != null &&
-                tipoProductoManager.tiposProducto.isEmpty &&
-                !tipoProductoManager.isLoading) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                tipoProductoManager.loadTiposProductoByEmpresa(
-                  widget.idEmpresa!,
-                );
-              });
+      );
+    }
+
+    if (_tiposProducto.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('No hay tipos de productos registrados'),
+            const SizedBox(height: 16),
+            const Text('Presiona el botón + para agregar una nueva unidad'),
+          ],
+        ),
+      );
+    }
+
+    // Agrupar por categorías
+    final categorias = _tipoProductoManager.getCategoriasUnicas();
+    return RefreshIndicator(
+      onRefresh: _recargarDatos,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: categorias.length + 1, // +1 para la sección "Sin categoría"
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            // Mostrar productos sin categoría
+            final productosSinCategoria = _tiposProducto
+                .where((p) => p.categoria.isEmpty)
+                .toList();
+            if (productosSinCategoria.isEmpty) {
+              return const SizedBox.shrink();
             }
-            if (tipoProductoManager.isLoading ||
-                unidadMedidaManager.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (tipoProductoManager.error != null ||
-                unidadMedidaManager.error != null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Error: ${tipoProductoManager.error ?? unidadMedidaManager.error}',
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (widget.idEmpresa != null) {
-                          tipoProductoManager.loadTiposProductoByEmpresa(
-                            widget.idEmpresa!,
-                          );
-                        }
-                        unidadMedidaManager.loadUnidadesMedida();
-                      },
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              );
-            }
-            if (tipoProductoManager.tiposProducto.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('No hay tipos de productos registrados'),
-                    SizedBox(height: 16),
-                    Text('Presiona el botón + para agregar una nueva unidad'),
-                  ],
-                ),
-              );
-            }
-            // Agrupar por categorías
-            final categorias = tipoProductoManager.getCategoriasUnicas();
-            return RefreshIndicator(
-              onRefresh: () async {
-                if (widget.idEmpresa != null) {
-                  await tipoProductoManager.loadTiposProductoByEmpresa(
-                    widget.idEmpresa!,
-                  );
-                }
-                await unidadMedidaManager.loadUnidadesMedida();
-              },
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount:
-                    categorias.length + 1, // +1 para la sección "Sin categoría"
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    // Mostrar productos sin categoría
-                    final productosSinCategoria = tipoProductoManager
-                        .tiposProducto
-                        .where((p) => p.categoria.isEmpty)
-                        .toList();
-                    if (productosSinCategoria.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    return _buildCategoriaSection(
-                      context,
-                      'Sin categoría',
-                      productosSinCategoria,
-                    );
-                  }
-                  final categoria = categorias[index - 1];
-                  final productosDeCategoria = tipoProductoManager.tiposProducto
-                      .where((p) => p.categoria == categoria)
-                      .toList();
-                  return _buildCategoriaSection(
-                    context,
-                    categoria,
-                    productosDeCategoria,
-                  );
-                },
-              ),
+            return _buildCategoriaSection(
+              context,
+              'Sin categoría',
+              productosSinCategoria,
             );
-          },
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _showAddTipoProductoDialog(context),
-          child: const Icon(Icons.add),
-        ),
+          }
+          final categoria = categorias[index - 1];
+          final productosDeCategoria = _tiposProducto
+              .where((p) => p.categoria == categoria)
+              .toList();
+          return _buildCategoriaSection(
+            context,
+            categoria,
+            productosDeCategoria,
+          );
+        },
       ),
     );
   }
@@ -366,8 +379,8 @@ class _TipoProductoSelectionScreenState
       ),
     ).then((_) {
       // Recargar los datos cuando volvemos de la pantalla de detalle
-      if (widget.idEmpresa != null) {
-        _tipoProductoManager.loadTiposProductoByEmpresa(widget.idEmpresa!);
+      if (_mounted && widget.idEmpresa != null) {
+        _recargarDatos();
       }
     });
   }
@@ -401,12 +414,9 @@ class _TipoProductoSelectionScreenState
       );
       return;
     }
-    final unidadMedidaManager = Provider.of<UnidadMedidaManager>(
-      context,
-      listen: false,
-    );
+
     // Verificar si hay unidades de medida cargadas, si no, cargarlas
-    if (unidadMedidaManager.unidadesMedida.isEmpty) {
+    if (_unidadesMedida.isEmpty) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -429,13 +439,12 @@ class _TipoProductoSelectionScreenState
                   ),
                 ).then((_) {
                   // Recargar las unidades de medida cuando volvemos
-                  unidadMedidaManager.loadUnidadesMedida();
-                  // Volver a mostrar el diálogo después de cargar las unidades
-                  if (unidadMedidaManager.unidadesMedida.isNotEmpty) {
-                    _showAddTipoProductoDialogWithUnidades(
-                      context,
-                      unidadMedidaManager,
-                    );
+                  if (_mounted) {
+                    _recargarDatos();
+                    // Volver a mostrar el diálogo después de cargar las unidades
+                    if (_unidadesMedida.isNotEmpty) {
+                      _showAddTipoProductoDialogWithUnidades(context);
+                    }
                   }
                 });
               },
@@ -445,15 +454,12 @@ class _TipoProductoSelectionScreenState
         ),
       );
     } else {
-      _showAddTipoProductoDialogWithUnidades(context, unidadMedidaManager);
+      _showAddTipoProductoDialogWithUnidades(context);
     }
   }
 
-  void _showAddTipoProductoDialogWithUnidades(
-    BuildContext context,
-    UnidadMedidaManager unidadMedidaManager,
-  ) {
-    final formKey = GlobalKey<FormState>(); // Clave global para el formulario
+  void _showAddTipoProductoDialogWithUnidades(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
     final nombreController = TextEditingController();
     final descripcionController = TextEditingController();
     List<int> cantidadesPosibles = [50, 70, 100];
@@ -466,178 +472,191 @@ class _TipoProductoSelectionScreenState
     bool permiteVentaParcial = true;
     String? codigoColor;
     bool tieneDescripcion = false;
-    String? unidadMedidaSeleccionada =
-        unidadMedidaManager.unidadesMedida.isNotEmpty
-        ? unidadMedidaManager.unidadesMedida.first.nombre
+    String? unidadMedidaSeleccionada = _unidadesMedida.isNotEmpty
+        ? _unidadesMedida.first.nombre
         : null;
     String? unidadMedidaSecundaria;
 
-    final tipoProductoManager = Provider.of<TipoProductoManager>(
-      context,
-      listen: false,
-    );
-    final List<String> categoriasExistentes = tipoProductoManager
+    final List<String> categoriasExistentes = _tipoProductoManager
         .getCategoriasUnicas();
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) {
+          // Agregar controlador para el precio por paquete
+          final precioPaqueteController = TextEditingController();
+
           return AlertDialog(
             title: const Text('Nuevo Tipo de Producto'),
             content: SingleChildScrollView(
               child: Form(
-                key: formKey, // Asignamos la clave al formulario
-                child: Consumer<UnidadMedidaManager>(
-                  builder: (context, unidadMedidaManager, child) {
-                    if (unidadMedidaManager.unidadesMedida.isEmpty) {
-                      return Column(
-                        children: [
-                          Text('No hay unidades de medida disponibles'),
-                          SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const UnidadMedidaListScreen(),
-                                ),
-                              );
-                            },
-                            child: const Text('Agregar Unidades de Medida'),
-                          ),
-                        ],
-                      );
-                    }
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Campo Nombre con validaciones
+                    TextFormField(
+                      controller: nombreController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre',
+                        hintText: 'Ej: Piel de Sirena',
+                        border: OutlineInputBorder(),
+                        counterText: '',
+                      ),
+                      maxLength: 30,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'El nombre es obligatorio';
+                        }
+                        if (value.trim().length > 30) {
+                          return 'Máximo 30 caracteres';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
 
-                    final List<String> categoriasExistentes =
-                        tipoProductoManager.getCategoriasUnicas();
+                    SwitchListTile(
+                      title: const Text('Incluir descripción'),
+                      value: tieneDescripcion,
+                      onChanged: (value) {
+                        setState(() {
+                          tieneDescripcion = value;
+                        });
+                      },
+                    ),
 
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Campo Nombre con validaciones
-                        TextFormField(
-                          controller: nombreController,
-                          decoration: const InputDecoration(
-                            labelText: 'Nombre',
-                            hintText: 'Ej: Piel de Sirena',
-                            border: OutlineInputBorder(),
-                            counterText: '',
-                          ),
-                          maxLength: 30,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'El nombre es obligatorio';
-                            }
-                            if (value.trim().length > 30) {
-                              return 'Máximo 30 caracteres';
-                            }
-                            return null;
-                          },
+                    if (tieneDescripcion) ...[
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: descripcionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Descripción',
+                          hintText: 'Descripción del tipo de producto',
+                          border: OutlineInputBorder(),
                         ),
-                        const SizedBox(height: 8),
+                        maxLines: 3,
+                        validator: (value) {
+                          if (tieneDescripcion &&
+                              (value == null || value.trim().isEmpty)) {
+                            return 'Ingrese la descripción';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 8),
 
-                        SwitchListTile(
-                          title: const Text('Incluir descripción'),
-                          value: tieneDescripcion,
-                          onChanged: (value) {
+                    // Selector de unidad de medida
+                    DropdownButtonFormField<String>(
+                      value: unidadMedidaSeleccionada,
+                      decoration: const InputDecoration(
+                        labelText: 'Unidad de Medida',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.straighten),
+                      ),
+                      items: _unidadesMedida.map((unidad) {
+                        return DropdownMenuItem<String>(
+                          value: unidad.nombre,
+                          child: Text(unidad.nombre),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          unidadMedidaSeleccionada = value;
+                          if (unidadMedidaSecundaria ==
+                              unidadMedidaSeleccionada) {
+                            unidadMedidaSecundaria = null;
+                          }
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Seleccione una unidad de medida';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    const Text(
+                      'Cantidades Posibles:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: cantidadesPosibles.map((cantidad) {
+                        return InputChip(
+                          label: Text('$cantidad'),
+                          onPressed: () {
                             setState(() {
-                              tieneDescripcion = value;
+                              cantidadPrioritaria = cantidad;
                             });
                           },
-                        ),
-
-                        if (tieneDescripcion) ...[
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: descripcionController,
+                          selected: cantidadPrioritaria == cantidad,
+                          selectedColor: Theme.of(context).primaryColor,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
                             decoration: const InputDecoration(
-                              labelText: 'Descripción',
-                              hintText: 'Descripción del tipo de producto',
+                              labelText: 'Agregar cantidad',
+                              hintText: 'Ej: 6, 9',
                               border: OutlineInputBorder(),
                             ),
-                            maxLines: 3,
+                            keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (tieneDescripcion &&
-                                  (value == null || value.trim().isEmpty)) {
-                                return 'Ingrese la descripción';
+                              if (value != null && value.isNotEmpty) {
+                                final num = int.tryParse(value);
+                                if (num == null) {
+                                  return 'Debe ser un número entero';
+                                }
+                                if (cantidadesPosibles.contains(num)) {
+                                  return 'Esta cantidad ya existe';
+                                }
                               }
                               return null;
                             },
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-
-                        // Selector de unidad de medida
-                        DropdownButtonFormField<String>(
-                          value: unidadMedidaSeleccionada,
-                          decoration: const InputDecoration(
-                            labelText: 'Unidad de Medida',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.straighten),
-                          ),
-                          items: unidadMedidaManager.unidadesMedida.map((
-                            unidad,
-                          ) {
-                            return DropdownMenuItem<String>(
-                              value: unidad.nombre,
-                              child: Text(unidad.nombre),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              unidadMedidaSeleccionada = value;
-                              if (unidadMedidaSecundaria ==
-                                  unidadMedidaSeleccionada) {
-                                unidadMedidaSecundaria = null;
+                            onSaved: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                final nuevaCantidad = int.tryParse(value);
+                                if (nuevaCantidad != null &&
+                                    !cantidadesPosibles.contains(
+                                      nuevaCantidad,
+                                    )) {
+                                  setState(() {
+                                    cantidadesPosibles.add(nuevaCantidad);
+                                  });
+                                }
                               }
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Seleccione una unidad de medida';
-                            }
-                            return null;
-                          },
+                            },
+                          ),
                         ),
-                        const SizedBox(height: 8),
-
-                        const Text(
-                          'Cantidades Posibles:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: cantidadesPosibles.map((cantidad) {
-                            return InputChip(
-                              label: Text('$cantidad'),
-                              onPressed: () {
-                                setState(() {
-                                  cantidadPrioritaria = cantidad;
-                                });
-                              },
-                              selected: cantidadPrioritaria == cantidad,
-                              selectedColor: Theme.of(context).primaryColor,
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                decoration: const InputDecoration(
-                                  labelText: 'Agregar cantidad',
-                                  hintText: 'Ej: 6, 9',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value != null && value.isNotEmpty) {
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () {
+                            final controller = TextEditingController();
+                            showDialog(
+                              context: dialogContext,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Agregar Cantidad'),
+                                content: TextFormField(
+                                  controller: controller,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Cantidad',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Ingrese una cantidad';
+                                    }
                                     final num = int.tryParse(value);
                                     if (num == null) {
                                       return 'Debe ser un número entero';
@@ -645,373 +664,339 @@ class _TipoProductoSelectionScreenState
                                     if (cantidadesPosibles.contains(num)) {
                                       return 'Esta cantidad ya existe';
                                     }
-                                  }
-                                  return null;
-                                },
-                                onSaved: (value) {
-                                  if (value != null && value.isNotEmpty) {
-                                    final nuevaCantidad = int.tryParse(value);
-                                    if (nuevaCantidad != null &&
-                                        !cantidadesPosibles.contains(
-                                          nuevaCantidad,
-                                        )) {
-                                      setState(() {
-                                        cantidadesPosibles.add(nuevaCantidad);
-                                      });
-                                    }
-                                  }
-                                },
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add),
-                              onPressed: () {
-                                final controller = TextEditingController();
-                                showDialog(
-                                  context: dialogContext,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Agregar Cantidad'),
-                                    content: TextFormField(
-                                      controller: controller,
-                                      keyboardType: TextInputType.number,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Cantidad',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Ingrese una cantidad';
-                                        }
-                                        final num = int.tryParse(value);
-                                        if (num == null) {
-                                          return 'Debe ser un número entero';
-                                        }
-                                        if (cantidadesPosibles.contains(num)) {
-                                          return 'Esta cantidad ya existe';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('Cancelar'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          if (controller.text.isNotEmpty) {
-                                            final nuevaCantidad = int.tryParse(
-                                              controller.text,
-                                            );
-                                            if (nuevaCantidad != null &&
-                                                !cantidadesPosibles.contains(
-                                                  nuevaCantidad,
-                                                )) {
-                                              setState(() {
-                                                cantidadesPosibles.add(
-                                                  nuevaCantidad,
-                                                );
-                                              });
-                                            }
-                                          }
-                                          Navigator.pop(context);
-                                        },
-                                        child: const Text('Agregar'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Cantidad Prioritaria: $cantidadPrioritaria',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Campo Precio de Compra con validaciones
-                        TextFormField(
-                          controller: precioCompraDefaultController,
-                          decoration: const InputDecoration(
-                            labelText: 'Precio de Compra por Defecto',
-                            hintText: 'Ej: 150.00',
-                            prefixIcon: Icon(Icons.money_off),
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'El precio es obligatorio';
-                            }
-                            final num = double.tryParse(value);
-                            if (num == null) {
-                              return 'Debe ser un número válido';
-                            }
-                            if (value.contains('.') &&
-                                value.split('.')[1].length > 2) {
-                              return 'Máximo 2 decimales';
-                            }
-                            if (num <= 0) {
-                              return 'Debe ser mayor que cero';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Campo Precio Venta Menor con validaciones
-                        TextFormField(
-                          controller: precioVentaDefaultMenorController,
-                          decoration: const InputDecoration(
-                            labelText: 'Precio de Venta por Defecto (Menor)',
-                            hintText: 'Ej: 170.00',
-                            prefixIcon: Icon(Icons.trending_down),
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'El precio es obligatorio';
-                            }
-                            final num = double.tryParse(value);
-                            if (num == null) {
-                              return 'Debe ser un número válido';
-                            }
-                            if (value.contains('.') &&
-                                value.split('.')[1].length > 2) {
-                              return 'Máximo 2 decimales';
-                            }
-                            if (num <= 0) {
-                              return 'Debe ser mayor que cero';
-                            }
-                            final compra = double.tryParse(
-                              precioCompraDefaultController.text,
-                            );
-                            if (compra != null && num <= compra) {
-                              return 'Debe ser mayor al precio de compra';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Campo Precio Venta Mayor con validaciones
-                        TextFormField(
-                          controller: precioVentaDefaultMayorController,
-                          decoration: const InputDecoration(
-                            labelText: 'Precio de Venta por Defecto (Mayor)',
-                            hintText: 'Ej: 190.00',
-                            prefixIcon: Icon(Icons.trending_up),
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'El precio es obligatorio';
-                            }
-                            final num = double.tryParse(value);
-                            if (num == null) {
-                              return 'Debe ser un número válido';
-                            }
-                            if (value.contains('.') &&
-                                value.split('.')[1].length > 2) {
-                              return 'Máximo 2 decimales';
-                            }
-                            if (num <= 0) {
-                              return 'Debe ser mayor que cero';
-                            }
-                            final menor = double.tryParse(
-                              precioVentaDefaultMenorController.text,
-                            );
-                            if (menor != null && num <= menor) {
-                              return 'Debe ser mayor al precio menor';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Campo Categoría con Autocomplete y validaciones
-                        Autocomplete<String>(
-                          optionsBuilder: (TextEditingValue textEditingValue) {
-                            if (textEditingValue.text.isEmpty) {
-                              return const Iterable<String>.empty();
-                            }
-                            return categoriasExistentes.where((String option) {
-                              return option.toLowerCase().contains(
-                                textEditingValue.text.toLowerCase(),
-                              );
-                            });
-                          },
-                          onSelected: (String selection) {
-                            categoriaController.text = selection;
-                          },
-                          fieldViewBuilder:
-                              (
-                                BuildContext context,
-                                TextEditingController
-                                fieldTextEditingController,
-                                FocusNode fieldFocusNode,
-                                VoidCallback onFieldSubmitted,
-                              ) {
-                                fieldTextEditingController.text =
-                                    categoriaController.text;
-
-                                categoriaController.addListener(() {
-                                  fieldTextEditingController.text =
-                                      categoriaController.text;
-                                });
-
-                                return TextFormField(
-                                  controller: fieldTextEditingController,
-                                  focusNode: fieldFocusNode,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Categoría',
-                                    hintText:
-                                        'Ej: Telas, Accesorios, Herramientas',
-                                    border: OutlineInputBorder(),
-                                    prefixIcon: Icon(Icons.category),
-                                    counterText: '',
-                                  ),
-                                  maxLength: 30,
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'La categoría es obligatoria';
-                                    }
-                                    if (value.trim().length > 30) {
-                                      return 'Máximo 30 caracteres';
-                                    }
                                     return null;
                                   },
-                                  onChanged: (value) {
-                                    final formattedValue = value
-                                        .toUpperCase()
-                                        .trim();
-
-                                    if (formattedValue != value) {
-                                      //categoriaController.text = formattedValue;
-                                      // categoriaController.selection =
-                                      //     TextSelection.fromPosition(
-                                      //       TextPosition(
-                                      //         offset: formattedValue.length,
-                                      //       ),
-                                      //     );
-                                    }
-                                  },
-                                );
-                              },
-                        ),
-                        const SizedBox(height: 8),
-
-                        SwitchListTile(
-                          title: const Text('Requiere Color'),
-                          subtitle: const Text(
-                            'Indica si el producto necesita selección de color',
-                          ),
-                          value: requiereColor,
-                          onChanged: (value) {
-                            setState(() {
-                              requiereColor = value;
-                              if (!requiereColor) {
-                                codigoColor = null;
-                              }
-                            });
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      if (controller.text.isNotEmpty) {
+                                        final nuevaCantidad = int.tryParse(
+                                          controller.text,
+                                        );
+                                        if (nuevaCantidad != null &&
+                                            !cantidadesPosibles.contains(
+                                              nuevaCantidad,
+                                            )) {
+                                          setState(() {
+                                            cantidadesPosibles.add(
+                                              nuevaCantidad,
+                                            );
+                                          });
+                                        }
+                                      }
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Agregar'),
+                                  ),
+                                ],
+                              ),
+                            );
                           },
                         ),
-
-                        if (requiereColor) ...[
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            decoration: const InputDecoration(
-                              labelText: 'Código de Color',
-                              hintText: '4 dígitos o letras',
-                              counterText: '',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.format_color_fill),
-                            ),
-                            maxLength: 4,
-                            validator: (value) {
-                              if (requiereColor &&
-                                  (value == null || value.isEmpty)) {
-                                return 'El código de color es obligatorio';
-                              }
-                              return null;
-                            },
-                            onChanged: (value) {
-                              // Convertir a mayúsculas y eliminar espacios
-                              final formattedValue = value.toUpperCase().trim();
-                              if (formattedValue != value) {
-                                codigoColor = formattedValue;
-                              } else {
-                                codigoColor = value;
-                              }
-                            },
-                          ),
-                        ],
-
-                        SwitchListTile(
-                          title: const Text('Permite Venta Parcial'),
-                          subtitle: const Text(
-                            'Permite vender por unidades o solo completo',
-                          ),
-                          value: permiteVentaParcial,
-                          onChanged: (value) {
-                            setState(() {
-                              permiteVentaParcial = value;
-                              if (!permiteVentaParcial) {
-                                unidadMedidaSecundaria = null;
-                              }
-                            });
-                          },
-                        ),
-
-                        if (permiteVentaParcial) ...[
-                          DropdownButtonFormField<String>(
-                            value: unidadMedidaSecundaria,
-                            decoration: const InputDecoration(
-                              labelText: 'Unidad de Medida Secundaria',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: unidadMedidaManager.unidadesMedida
-                                .where(
-                                  (u) => u.nombre != unidadMedidaSeleccionada,
-                                )
-                                .map((unidad) {
-                                  return DropdownMenuItem<String>(
-                                    value: unidad.nombre,
-                                    child: Text(unidad.nombre),
-                                  );
-                                })
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                unidadMedidaSecundaria = value;
-                              });
-                            },
-                            validator: (value) {
-                              if (permiteVentaParcial &&
-                                  (value == null || value.isEmpty)) {
-                                return 'Seleccione una unidad de medida diferente';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
                       ],
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Cantidad Prioritaria: $cantidadPrioritaria',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Campo Precio de Compra con validaciones
+                    TextFormField(
+                      controller: precioCompraDefaultController,
+                      decoration: const InputDecoration(
+                        labelText: 'Precio de Compra por Defecto',
+                        hintText: 'Ej: 150.00',
+                        prefixIcon: Icon(Icons.money_off),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'El precio es obligatorio';
+                        }
+                        final num = double.tryParse(value);
+                        if (num == null) {
+                          return 'Debe ser un número válido';
+                        }
+                        if (value.contains('.') &&
+                            value.split('.')[1].length > 2) {
+                          return 'Máximo 2 decimales';
+                        }
+                        if (num <= 0) {
+                          return 'Debe ser mayor que cero';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Campo Precio Venta Menor con validaciones
+                    TextFormField(
+                      controller: precioVentaDefaultMenorController,
+                      decoration: const InputDecoration(
+                        labelText: 'Precio de Venta por Defecto (Menor)',
+                        hintText: 'Ej: 170.00',
+                        prefixIcon: Icon(Icons.trending_down),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'El precio es obligatorio';
+                        }
+                        final num = double.tryParse(value);
+                        if (num == null) {
+                          return 'Debe ser un número válido';
+                        }
+                        if (value.contains('.') &&
+                            value.split('.')[1].length > 2) {
+                          return 'Máximo 2 decimales';
+                        }
+                        if (num <= 0) {
+                          return 'Debe ser mayor que cero';
+                        }
+                        final compra = double.tryParse(
+                          precioCompraDefaultController.text,
+                        );
+                        if (compra != null && num <= compra) {
+                          return 'Debe ser mayor al precio de compra';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Campo Precio Venta Mayor con validaciones
+                    TextFormField(
+                      controller: precioVentaDefaultMayorController,
+                      decoration: const InputDecoration(
+                        labelText: 'Precio de Venta por Defecto (Mayor)',
+                        hintText: 'Ej: 190.00',
+                        prefixIcon: Icon(Icons.trending_up),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'El precio es obligatorio';
+                        }
+                        final num = double.tryParse(value);
+                        if (num == null) {
+                          return 'Debe ser un número válido';
+                        }
+                        if (value.contains('.') &&
+                            value.split('.')[1].length > 2) {
+                          return 'Máximo 2 decimales';
+                        }
+                        if (num <= 0) {
+                          return 'Debe ser mayor que cero';
+                        }
+                        final menor = double.tryParse(
+                          precioVentaDefaultMenorController.text,
+                        );
+                        if (menor != null && num <= menor) {
+                          return 'Debe ser mayor al precio menor';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // NUEVO: Campo Precio por Paquete con validaciones
+                    TextFormField(
+                      controller: precioPaqueteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Precio por Paquete',
+                        hintText: 'Ej: 500.00',
+                        prefixIcon: Icon(Icons.inventory_2),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) {
+                        if (value != null && value.isNotEmpty) {
+                          final num = double.tryParse(value);
+                          if (num == null) {
+                            return 'Debe ser un número válido';
+                          }
+                          if (value.contains('.') &&
+                              value.split('.')[1].length > 2) {
+                            return 'Máximo 2 decimales';
+                          }
+                          if (num <= 0) {
+                            return 'Debe ser mayor que cero';
+                          }
+                        }
+                        return null; // Es opcional, así que no es obligatorio
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Campo Categoría con Autocomplete y validaciones
+                    Autocomplete<String>(
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) {
+                          return const Iterable<String>.empty();
+                        }
+                        return categoriasExistentes.where((String option) {
+                          return option.toLowerCase().contains(
+                            textEditingValue.text.toLowerCase(),
+                          );
+                        });
+                      },
+                      onSelected: (String selection) {
+                        categoriaController.text = selection;
+                      },
+                      fieldViewBuilder:
+                          (
+                            BuildContext context,
+                            TextEditingController fieldTextEditingController,
+                            FocusNode fieldFocusNode,
+                            VoidCallback onFieldSubmitted,
+                          ) {
+                            fieldTextEditingController.text =
+                                categoriaController.text;
+
+                            categoriaController.addListener(() {
+                              fieldTextEditingController.text =
+                                  categoriaController.text;
+                            });
+
+                            return TextFormField(
+                              controller: fieldTextEditingController,
+                              focusNode: fieldFocusNode,
+                              decoration: const InputDecoration(
+                                labelText: 'Categoría',
+                                hintText: 'Ej: Telas, Accesorios, Herramientas',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.category),
+                                counterText: '',
+                              ),
+                              maxLength: 30,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'La categoría es obligatoria';
+                                }
+                                if (value.trim().length > 30) {
+                                  return 'Máximo 30 caracteres';
+                                }
+                                return null;
+                              },
+                            );
+                          },
+                    ),
+                    const SizedBox(height: 8),
+
+                    SwitchListTile(
+                      title: const Text('Requiere Color'),
+                      subtitle: const Text(
+                        'Indica si el producto necesita selección de color',
+                      ),
+                      value: requiereColor,
+                      onChanged: (value) {
+                        setState(() {
+                          requiereColor = value;
+                          if (!requiereColor) {
+                            codigoColor = null;
+                          }
+                        });
+                      },
+                    ),
+
+                    if (requiereColor) ...[
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Código de Color',
+                          hintText: '4 dígitos o letras',
+                          counterText: '',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.format_color_fill),
+                        ),
+                        maxLength: 4,
+                        validator: (value) {
+                          if (requiereColor &&
+                              (value == null || value.isEmpty)) {
+                            return 'El código de color es obligatorio';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          // Convertir a mayúsculas y eliminar espacios
+                          final formattedValue = value.toUpperCase().trim();
+                          if (formattedValue != value) {
+                            codigoColor = formattedValue;
+                          } else {
+                            codigoColor = value;
+                          }
+                        },
+                      ),
+                    ],
+
+                    SwitchListTile(
+                      title: const Text('Permite Venta Parcial'),
+                      subtitle: const Text(
+                        'Permite vender por unidades o solo completo',
+                      ),
+                      value: permiteVentaParcial,
+                      onChanged: (value) {
+                        setState(() {
+                          permiteVentaParcial = value;
+                          if (!permiteVentaParcial) {
+                            unidadMedidaSecundaria = null;
+                          }
+                        });
+                      },
+                    ),
+
+                    if (permiteVentaParcial) ...[
+                      DropdownButtonFormField<String>(
+                        value: unidadMedidaSecundaria,
+                        decoration: const InputDecoration(
+                          labelText: 'Unidad de Medida Secundaria',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _unidadesMedida
+                            .where((u) => u.nombre != unidadMedidaSeleccionada)
+                            .map((unidad) {
+                              return DropdownMenuItem<String>(
+                                value: unidad.nombre,
+                                child: Text(unidad.nombre),
+                              );
+                            })
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            unidadMedidaSecundaria = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (permiteVentaParcial &&
+                              (value == null || value.isEmpty)) {
+                            return 'Seleccione una unidad de medida diferente';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -1063,11 +1048,13 @@ class _TipoProductoSelectionScreenState
                       return;
                     }
 
-                    final tipoProductoManager =
-                        Provider.of<TipoProductoManager>(
-                          context,
-                          listen: false,
-                        );
+                    // Obtener el valor del precio por paquete (puede ser nulo)
+                    double? precioPaquete;
+                    if (precioPaqueteController.text.isNotEmpty) {
+                      precioPaquete = double.tryParse(
+                        precioPaqueteController.text,
+                      );
+                    }
 
                     final nuevoTipo = TipoProducto(
                       id: '',
@@ -1088,6 +1075,8 @@ class _TipoProductoSelectionScreenState
                       precioVentaDefaultMayor: double.parse(
                         precioVentaDefaultMayorController.text,
                       ),
+                      // NUEVO: Agregar precio por paquete
+                      precioPaquete: precioPaquete,
                       requiereColor: requiereColor,
                       codigoColor: requiereColor
                           ? codigoColor?.toUpperCase().trim()
@@ -1099,11 +1088,16 @@ class _TipoProductoSelectionScreenState
                           : null,
                       createdAt: DateTime.now(),
                       updatedAt: DateTime.now(),
+                      createdBy: _userId,
                     );
 
                     Navigator.pop(dialogContext);
                     await _tipoProductoManager.addTipoProducto(nuevoTipo);
-                    _tipoProductoManager.notifyListeners();
+
+                    // Recargar datos después de agregar
+                    if (_mounted) {
+                      _recargarDatos();
+                    }
                   }
                 },
                 child: const Text('Guardar'),

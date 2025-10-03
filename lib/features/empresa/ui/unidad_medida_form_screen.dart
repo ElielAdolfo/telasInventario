@@ -1,5 +1,6 @@
 // lib/features/producto/ui/unidad_medida_form_screen.dart
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:provider/provider.dart';
 import '../models/unidad_medida_model.dart';
 import '../logic/unidad_medida_manager.dart';
@@ -39,6 +40,8 @@ class _UnidadMedidaFormScreenState extends State<UnidadMedidaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authManager = Provider.of<AuthManager>(context);
+    final String? userId = authManager.userId;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -100,7 +103,7 @@ class _UnidadMedidaFormScreenState extends State<UnidadMedidaFormScreen> {
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: _saveForm,
+                      onPressed: () => _saveForm(userId),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -119,8 +122,17 @@ class _UnidadMedidaFormScreenState extends State<UnidadMedidaFormScreen> {
     );
   }
 
-  void _saveForm() async {
+  void _saveForm(String? userId) async {
     if (_formKey.currentState!.validate()) {
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: No se pudo identificar al usuario'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
       setState(() => _isLoading = true);
 
       final unidad = widget.unidad == null
@@ -130,10 +142,12 @@ class _UnidadMedidaFormScreenState extends State<UnidadMedidaFormScreen> {
               descripcion: _descripcionController.text,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
+              createdBy: userId,
             )
           : widget.unidad!.copyWith(
               nombre: _nombreController.text,
               descripcion: _descripcionController.text,
+              updatedBy: userId,
             );
 
       final manager = Provider.of<UnidadMedidaManager>(context, listen: false);

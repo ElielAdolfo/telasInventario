@@ -108,11 +108,12 @@ class SolicitudTrasladoService extends BaseService {
     }
   }
 
-  Future<void> cancelarSolicitud(String id, String motivo) async {
+  Future<void> cancelarSolicitud(String id, String motivo, String idCancelador) async {
     await dbRef.child(id).update({
       'estado': 'CANCELADO',
       'motivoRechazo': motivo,
       'updatedAt': DateTime.now().toIso8601String(),
+      'updatedBy': idCancelador,
     });
   }
 

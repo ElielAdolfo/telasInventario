@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/tienda_manager.dart';
 import 'package:provider/provider.dart';
 import '../models/tienda_model.dart';
@@ -21,10 +22,16 @@ class _TiendaFormScreenState extends State<TiendaFormScreen> {
   late TextEditingController _encargadoController;
   bool _isWarehouse = false;
   bool _isLoading = false;
+  late final String? _userId;
 
   @override
   void initState() {
     super.initState();
+    
+    // Obtener el ID del usuario actual
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    _userId = authManager.userId;
+    
     _nombreController = TextEditingController(
       text: widget.tienda?.nombre ?? '',
     );
@@ -176,8 +183,14 @@ class _TiendaFormScreenState extends State<TiendaFormScreen> {
               telefono: _telefonoController.text,
               encargado: _encargadoController.text,
               isWarehouse: _isWarehouse,
+              deleted: false,
+              deletedAt: null,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
+              // Campos de auditoría
+              createdBy: _userId,
+              updatedBy: _userId,
+              deletedBy: null,
             )
           : widget.tienda!.copyWith(
               nombre: _nombreController.text,
@@ -185,6 +198,10 @@ class _TiendaFormScreenState extends State<TiendaFormScreen> {
               telefono: _telefonoController.text,
               encargado: _encargadoController.text,
               isWarehouse: _isWarehouse,
+              deleted: widget.tienda!.deleted,
+              deletedAt: widget.tienda!.deletedAt,
+              // Actualizar campos de auditoría
+              updatedBy: _userId,
             );
 
       final manager = Provider.of<TiendaManager>(context, listen: false);

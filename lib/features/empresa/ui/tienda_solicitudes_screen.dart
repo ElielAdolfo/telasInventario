@@ -1,6 +1,7 @@
 // lib/features/empresa/ui/tienda_solicitudes_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/solicitud_traslado_manager.dart';
 import 'package:inventario/features/empresa/models/solicitud_traslado_model.dart';
 import 'package:inventario/features/empresa/models/tienda_model.dart';
@@ -24,11 +25,16 @@ class TiendaSolicitudesScreen extends StatefulWidget {
 
 class _TiendaSolicitudesScreenState extends State<TiendaSolicitudesScreen> {
   bool _mounted = true;
+  late final String? _userId;
 
   @override
   void initState() {
     super.initState();
     _mounted = true;
+
+    // Obtener el ID del usuario actual
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    _userId = authManager.userId;
 
     // Cargar solicitudes pendientes de la tienda
     Future.microtask(() {
@@ -327,7 +333,8 @@ class _TiendaSolicitudesScreenState extends State<TiendaSolicitudesScreen> {
                     .aprobarSolicitud(
                       solicitud.id,
                       widget.empresaId,
-                      'usuario_actual', // Esto debería obtenerse del sistema de autenticación
+                      _userId ??
+                          'usuario_actual', // Esto debería obtenerse del sistema de autenticación
                     );
 
                 if (!_mounted) return;
@@ -389,6 +396,7 @@ class _TiendaSolicitudesScreenState extends State<TiendaSolicitudesScreen> {
                 solicitud.id,
                 widget.empresaId,
                 'Cancelado por la tienda',
+                _userId ?? 'usuario_actual',
               );
 
               // Cerrar indicador de carga solo si el diálogo sigue abierto

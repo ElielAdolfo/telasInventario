@@ -11,6 +11,11 @@ class Tienda {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  // Campos de auditoría
+  final String? createdBy;
+  final String? updatedBy;
+  final String? deletedBy;
+
   Tienda({
     required this.id,
     required this.empresaId,
@@ -23,6 +28,10 @@ class Tienda {
     this.deletedAt,
     required this.createdAt,
     required this.updatedAt,
+    // Campos de auditoría
+    this.createdBy,
+    this.updatedBy,
+    this.deletedBy,
   });
 
   factory Tienda.fromJson(Map<String, dynamic> json, String id) {
@@ -35,9 +44,15 @@ class Tienda {
       encargado: json['encargado'] ?? '',
       isWarehouse: json['isWarehouse'] ?? false,
       deleted: json['deleted'] ?? false,
-      deletedAt: json['deletedAt'] != null ? DateTime.parse(json['deletedAt']) : null,
+      deletedAt: json['deletedAt'] != null
+          ? DateTime.parse(json['deletedAt'])
+          : null,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+      // Campos de auditoría
+      createdBy: json['createdBy'],
+      updatedBy: json['updatedBy'],
+      deletedBy: json['deletedBy'],
     );
   }
 
@@ -53,6 +68,10 @@ class Tienda {
       'deletedAt': deletedAt?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      // Campos de auditoría
+      'createdBy': createdBy,
+      'updatedBy': updatedBy,
+      'deletedBy': deletedBy,
     };
   }
 
@@ -64,6 +83,8 @@ class Tienda {
     bool? isWarehouse,
     bool? deleted,
     DateTime? deletedAt,
+    // Campos de auditoría
+    String? updatedBy,
   }) {
     return Tienda(
       id: id,
@@ -77,6 +98,10 @@ class Tienda {
       deletedAt: deletedAt ?? this.deletedAt,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
+      // Campos de auditoría
+      createdBy: createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
+      deletedBy: deletedBy,
     );
   }
 }

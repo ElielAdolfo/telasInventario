@@ -15,6 +15,14 @@ class MovimientoStock {
   final String realizadoPor;
   final String? observaciones;
 
+  // Campos de auditoría
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final String? createdBy;
+  final String? updatedBy;
+  final String? deletedBy;
+
   MovimientoStock({
     required this.id,
     required this.idProducto,
@@ -28,6 +36,13 @@ class MovimientoStock {
     required this.fechaMovimiento,
     required this.realizadoPor,
     this.observaciones,
+    // Campos de auditoría
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    this.createdBy,
+    this.updatedBy,
+    this.deletedBy,
   });
 
   factory MovimientoStock.fromJson(Map<String, dynamic> json, String id) {
@@ -44,6 +59,13 @@ class MovimientoStock {
       fechaMovimiento: DateTime.parse(json['fechaMovimiento']),
       realizadoPor: json['realizadoPor'] ?? '',
       observaciones: json['observaciones'],
+      // Campos de auditoría
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
+      deletedAt: json['deletedAt'] != null ? DateTime.parse(json['deletedAt']) : null,
+      createdBy: json['createdBy'],
+      updatedBy: json['updatedBy'],
+      deletedBy: json['deletedBy'],
     );
   }
 
@@ -60,6 +82,13 @@ class MovimientoStock {
       'fechaMovimiento': fechaMovimiento.toIso8601String(),
       'realizadoPor': realizadoPor,
       'observaciones': observaciones,
+      // Campos de auditoría
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'deletedAt': deletedAt?.toIso8601String(),
+      'createdBy': createdBy,
+      'updatedBy': updatedBy,
+      'deletedBy': deletedBy,
     };
   }
 }

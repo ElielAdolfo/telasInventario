@@ -1,6 +1,7 @@
 // lib/features/color/ui/color_form_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
 import 'package:inventario/features/empresa/models/color_model.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,8 @@ class _ColorFormScreenState extends State<ColorFormScreen> {
   // Color seleccionado para el picker
   Color _selectedColor = Colors.blue;
 
+  late final String? _userId;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +34,9 @@ class _ColorFormScreenState extends State<ColorFormScreen> {
       // Inicializar el color seleccionado desde el código hexadecimal
       _selectedColor = _parseColor(widget.color!.codigoColor);
     }
+
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    _userId = authManager.userId;
   }
 
   @override
@@ -45,17 +51,33 @@ class _ColorFormScreenState extends State<ColorFormScreen> {
 
     final manager = Provider.of<ColorManager>(context, listen: false);
 
-    final nuevoColor = ColorProducto(
-      id: widget.color?.id ?? '',
-      nombreColor: _nombreController.text.trim(),
-      codigoColor: _codigoController.text.trim(),
-      createdAt: widget.color?.createdAt ?? DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-
     if (widget.color == null) {
+      final nuevoColor = ColorProducto(
+        id: widget.color?.id ?? '',
+        nombreColor: _nombreController.text.trim(),
+        codigoColor: _codigoController.text.trim(),
+        deleted: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: _userId,
+        updatedBy: _userId,
+        deletedBy: null,
+      );
       await manager.addColor(nuevoColor);
     } else {
+      // Actualizar color existente
+      final nuevoColor = ColorProducto(
+        id: widget.color?.id ?? '',
+        nombreColor: _nombreController.text.trim(),
+        codigoColor: _codigoController.text.trim(),
+        deleted: widget.color!.deleted,
+        deletedAt: widget.color!.deletedAt,
+        createdAt: widget.color!.createdAt,
+        updatedAt: DateTime.now(),
+        createdBy: widget.color!.createdBy,
+        updatedBy: _userId,
+        deletedBy: widget.color!.deletedBy,
+      );
       await manager.updateColor(nuevoColor);
     }
 

@@ -11,7 +11,14 @@ class Venta {
   final String realizadoPor;
   final List<VentaItem> items;
   final bool deleted;
-  final String updatedAt;
+  
+  // Campos de auditoría
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final String? createdBy;
+  final String? updatedBy;
+  final String? deletedBy;
 
   Venta({
     required this.id,
@@ -22,7 +29,13 @@ class Venta {
     required this.realizadoPor,
     required this.items,
     required this.deleted,
+    // Campos de auditoría
+    required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
+    this.createdBy,
+    this.updatedBy,
+    this.deletedBy,
   });
 
   // Factory constructor para crear desde JSON
@@ -38,7 +51,13 @@ class Venta {
           .map((item) => VentaItem.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
       deleted: json['deleted'] ?? false,
-      updatedAt: json['updatedAt'] ?? '',
+      // Campos de auditoría
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
+      deletedAt: json['deletedAt'] != null ? DateTime.parse(json['deletedAt']) : null,
+      createdBy: json['createdBy'],
+      updatedBy: json['updatedBy'],
+      deletedBy: json['deletedBy'],
     );
   }
 
@@ -52,8 +71,52 @@ class Venta {
       'realizadoPor': realizadoPor,
       'items': items.map((item) => item.toJson()).toList(),
       'deleted': deleted,
-      'updatedAt': updatedAt,
+      // Campos de auditoría
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'deletedAt': deletedAt?.toIso8601String(),
+      'createdBy': createdBy,
+      'updatedBy': updatedBy,
+      'deletedBy': deletedBy,
     };
+  }
+  
+
+  // Método copyWith
+  Venta copyWith({
+    String? id,
+    String? idTienda,
+    String? idEmpresa,
+    DateTime? fechaVenta,
+    double? total,
+    String? realizadoPor,
+    List<VentaItem>? items,
+    bool? deleted,
+    // Campos de auditoría
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? deletedAt,
+    String? createdBy,
+    String? updatedBy,
+    String? deletedBy,
+  }) {
+    return Venta(
+      id: id ?? this.id,
+      idTienda: idTienda ?? this.idTienda,
+      idEmpresa: idEmpresa ?? this.idEmpresa,
+      fechaVenta: fechaVenta ?? this.fechaVenta,
+      total: total ?? this.total,
+      realizadoPor: realizadoPor ?? this.realizadoPor,
+      items: items ?? this.items,
+      deleted: deleted ?? this.deleted,
+      // Campos de auditoría
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      createdBy: createdBy ?? this.createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
+      deletedBy: deletedBy ?? this.deletedBy,
+    );
   }
 
   @override
@@ -66,7 +129,10 @@ class Venta {
         'total: $total, '
         'realizadoPor: $realizadoPor, '
         'deleted: $deleted, '
+        'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '
+        'createdBy: $createdBy, '
+        'updatedBy: $updatedBy, '
         'items: $items'
         ')';
   }

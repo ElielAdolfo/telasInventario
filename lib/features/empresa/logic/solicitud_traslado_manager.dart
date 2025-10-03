@@ -166,6 +166,11 @@ class SolicitudTrasladoManager with ChangeNotifier {
         // IDs para referencia
         idTipoProducto: stock.idTipoProducto,
         idColor: stock.idColor,
+        // Campos de auditoría
+        createdAt: DateTime.now(),
+        createdBy: solicitud.solicitadoPor ?? 'sistema',
+        updatedAt: DateTime.now(),
+        updatedBy: solicitud.solicitadoPor ?? 'sistema',
       );
 
       final id = await _service.createSolicitudTraslado(solicitudConEstado);
@@ -208,6 +213,11 @@ class SolicitudTrasladoManager with ChangeNotifier {
             : 'EMPRESA',
         fechaMovimiento: DateTime.now(),
         realizadoPor: solicitud.solicitadoPor ?? '',
+        // Campos de auditoría
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: solicitud.solicitadoPor ?? 'sistema',
+        updatedBy: solicitud.solicitadoPor ?? 'sistema',
       );
 
       // Aquí debería llamarse al servicio de movimientos para registrar el movimiento
@@ -261,6 +271,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
 
     try {
       final solicitud = await _service.getSolicitudById(idSolicitud);
+      print(solicitud.toString());
       if (solicitud == null) {
         _error = 'No se encontró la solicitud';
         _isLoading = false;
@@ -290,6 +301,9 @@ class SolicitudTrasladoManager with ChangeNotifier {
         estado: 'APROBADO',
         aprobadoPor: idAprobador,
         fechaAprobacion: DateTime.now(),
+        // Actualizar campos de auditoría
+        updatedAt: DateTime.now(),
+        updatedBy: idAprobador,
       );
 
       final resultadoSolicitud = await _service.updateSolicitudTraslado(
@@ -331,6 +345,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
         precioCompra: solicitud.precioCompra,
         precioVentaMenor: solicitud.precioVentaMenor,
         precioVentaMayor: solicitud.precioVentaMayor,
+        precioPaquete: solicitud.precioPaquete, // Agregar este campo
         fechaIngresoStock: DateTime.now(),
         idSolicitudTraslado: idSolicitud,
         deleted: false,
@@ -362,33 +377,6 @@ class SolicitudTrasladoManager with ChangeNotifier {
         return false;
       }
 
-      /*// Crear lote en tienda
-      final lote = StockLoteTienda( 
-        id: '',
-        idStockTienda: idStockTienda,
-        idSolicitudTraslado: idSolicitud,
-        cantidadTotal: solicitud.cantidadSolicitada,
-        cantidadVendida: 0,
-        cantidadDisponible: solicitud.cantidadSolicitada,
-        cantidadPorUnidad: stock.unidades,
-        unidadesAbiertas: 0,
-        deleted: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      final idLote = await _stockLoteTiendaService.createLote(lote);
-      if (idLote.isEmpty) {
-        _error = 'No se pudo crear el lote';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      // Actualizar stockTienda con el id del lote
-      stockTienda = stockTienda.copyWith(idsLotes: [idLote]);
-      await _stockTiendaService.updateStockTienda(stockTienda);*/
-
       // Registrar movimiento de aprobación
       final movimiento = MovimientoStock(
         id: '',
@@ -406,6 +394,11 @@ class SolicitudTrasladoManager with ChangeNotifier {
             : 'EMPRESA',
         fechaMovimiento: DateTime.now(),
         realizadoPor: idAprobador,
+        // Campos de auditoría
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: idAprobador,
+        updatedBy: idAprobador,
       );
 
       // Aquí deberías llamar al servicio para guardar el movimiento
@@ -429,6 +422,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
     String idSolicitud,
     String idEmpresa,
     String motivo,
+    String idRechazador, // Nuevo parámetro para auditoría
   ) async {
     _isLoading = true;
     notifyListeners();
@@ -464,6 +458,9 @@ class SolicitudTrasladoManager with ChangeNotifier {
         estado: 'RECHAZADO',
         motivoRechazo: motivo,
         fechaRechazo: DateTime.now(),
+        // Actualizar campos de auditoría
+        updatedAt: DateTime.now(),
+        updatedBy: idRechazador,
       );
 
       final resultadoSolicitud = await _service.updateSolicitudTraslado(
@@ -508,8 +505,13 @@ class SolicitudTrasladoManager with ChangeNotifier {
             ? 'TIENDA'
             : 'EMPRESA',
         fechaMovimiento: DateTime.now(),
-        realizadoPor: 'system',
+        realizadoPor: idRechazador,
         observaciones: motivo,
+        // Campos de auditoría
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: idRechazador,
+        updatedBy: idRechazador,
       );
 
       // Aquí debería llamarse al servicio de movimientos para registrar el movimiento
@@ -577,6 +579,9 @@ class SolicitudTrasladoManager with ChangeNotifier {
         recibidoPor: idRecibidoPor,
         fechaRecepcion: DateTime.now(),
         observacionesRecepcion: observaciones,
+        // Actualizar campos de auditoría
+        updatedAt: DateTime.now(),
+        updatedBy: idRecibidoPor,
       );
 
       final resultadoSolicitud = await _service.updateSolicitudTraslado(
@@ -622,6 +627,11 @@ class SolicitudTrasladoManager with ChangeNotifier {
         fechaMovimiento: DateTime.now(),
         realizadoPor: idRecibidoPor,
         observaciones: observaciones,
+        // Campos de auditoría
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: idRecibidoPor,
+        updatedBy: idRecibidoPor,
       );
 
       // Aquí debería llamarse al servicio de movimientos para registrar el movimiento
@@ -673,6 +683,9 @@ class SolicitudTrasladoManager with ChangeNotifier {
         devueltoPor: idDevueltoPor,
         fechaDevolucion: DateTime.now(),
         motivoDevolucion: motivo,
+        // Actualizar campos de auditoría
+        updatedAt: DateTime.now(),
+        updatedBy: idDevueltoPor,
       );
 
       final resultadoSolicitud = await _service.updateSolicitudTraslado(
@@ -714,6 +727,11 @@ class SolicitudTrasladoManager with ChangeNotifier {
         fechaMovimiento: DateTime.now(),
         realizadoPor: idDevueltoPor,
         observaciones: motivo,
+        // Campos de auditoría
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: idDevueltoPor,
+        updatedBy: idDevueltoPor,
       );
 
       // Aquí debería llamarse al servicio de movimientos para registrar el movimiento

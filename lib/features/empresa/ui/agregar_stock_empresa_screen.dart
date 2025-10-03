@@ -34,9 +34,12 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
   final _precioCompraController = TextEditingController();
   final _precioVentaMenorController = TextEditingController();
   final _precioVentaMayorController = TextEditingController();
+  final _precioPaqueteController = TextEditingController(); // Nuevo controlador
   final _loteController = TextEditingController();
   final _observacionesController = TextEditingController();
   final _fechaVencimientoController = TextEditingController();
+
+  late final String? _userId;
 
   TipoProducto? _tipoProductoSeleccionado;
   DateTime? _fechaVencimiento;
@@ -64,6 +67,9 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<ColorManager>(context, listen: false).loadColores();
     });
+
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    _userId = authManager.userId;
   }
 
   @override
@@ -73,6 +79,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     _precioCompraController.dispose();
     _precioVentaMenorController.dispose();
     _precioVentaMayorController.dispose();
+    _precioPaqueteController.dispose(); // Disponer del nuevo controlador
     _loteController.dispose();
     _observacionesController.dispose();
     _fechaVencimientoController.dispose();
@@ -92,6 +99,13 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
           .toString();
       _precioVentaMayorController.text = producto.precioVentaDefaultMayor
           .toString();
+
+      // Precargar el precio por paquete si existe
+      if (producto.precioPaquete != null) {
+        _precioPaqueteController.text = producto.precioPaquete.toString();
+      } else {
+        _precioPaqueteController.clear();
+      }
 
       // Precargar la cantidad prioritaria en el campo de unidades
       _unidadesController.text = producto.cantidadPrioritaria.toString();
@@ -156,6 +170,12 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
       listen: false,
     );
 
+    // Obtener el valor del precio por paquete si existe
+    double? precioPaquete;
+    if (_precioPaqueteController.text.isNotEmpty) {
+      precioPaquete = double.tryParse(_precioPaqueteController.text);
+    }
+
     final nuevoStock = StockEmpresa(
       id: '',
       idEmpresa: widget.idEmpresa,
@@ -166,12 +186,14 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
       precioCompra: double.parse(_precioCompraController.text),
       precioVentaMenor: double.parse(_precioVentaMenorController.text),
       precioVentaMayor: double.parse(_precioVentaMayorController.text),
+      precioPaquete: precioPaquete, // Nuevo campo
       fechaIngreso: DateTime.now(),
       lote: _loteController.text.isNotEmpty ? _loteController.text : null,
       fechaVencimiento: _fechaVencimiento,
       observaciones: _observacionesController.text.isNotEmpty
           ? _observacionesController.text
           : null,
+      deleted: false,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       // Campos adicionales copiados del TipoProducto para mantener una copia independiente
@@ -179,16 +201,19 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
       nombre: _tipoProductoSeleccionado!.nombre,
       unidadMedida: _tipoProductoSeleccionado!.unidadMedida,
       unidadMedidaSecundaria: _tipoProductoSeleccionado?.unidadMedidaSecundaria,
-
       permiteVentaParcial: _tipoProductoSeleccionado!.permiteVentaParcial,
       requiereColor: _tipoProductoSeleccionado!.requiereColor,
       // Copiamos las cantidades posibles y la cantidad prioritaria
       cantidadesPosibles: _tipoProductoSeleccionado!.cantidadesPosibles,
       cantidadPrioritaria: _tipoProductoSeleccionado!.cantidadPrioritaria,
+      createdBy: userId,
+      updatedBy: userId,
+      deletedBy: null,
+      deletedAt: null,
     );
 
     try {
-      await stockManager.addStockEmpresa(nuevoStock,userId);
+      await stockManager.addStockEmpresa(nuevoStock, userId);
 
       if (mounted) {
         Navigator.pop(context);
@@ -213,8 +238,6 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authManager = Provider.of<AuthManager>(context);
-    final String? userId = authManager.userId;
     return Scaffold(
       appBar: AppBar(title: Text('Agregar Stock - ${widget.empresaNombre}')),
       body: Form(
@@ -473,6 +496,27 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
               const SizedBox(height: 16),
 
+              TextFormField(
+                controller: _precioPaqueteController,
+                decoration: const InputDecoration(
+                  labelText: 'Precio por Paquete',
+                  hintText: 'Por paquete',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.inventory_2),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final precio = double.tryParse(value);
+                    if (precio == null || precio <= 0) {
+                      return 'Ingrese un precio válido';
+                    }
+                  }
+                  return null; // Es opcional
+                },
+              ),
+              const SizedBox(height: 16),
+
               // Lote
               TextFormField(
                 controller: _loteController,
@@ -579,7 +623,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () => _guardarStock(userId),
+                  onPressed: () => _guardarStock(_userId),
                   child: const Text('Guardar Stock'),
                 ),
               ),

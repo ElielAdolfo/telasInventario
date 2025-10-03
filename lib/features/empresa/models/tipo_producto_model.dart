@@ -3,13 +3,14 @@ class TipoProducto {
   final String id;
   final String idEmpresa;
   final String nombre;
-  final String? descripcion; // Ahora es opcional
+  final String? descripcion;
   final String unidadMedida;
   final List<int> cantidadesPosibles;
   final int cantidadPrioritaria;
-  final double precioCompraDefault; // Nuevo campo
-  final double precioVentaDefaultMenor; // Nuevo campo
-  final double precioVentaDefaultMayor; // Nuevo campo
+  final double precioCompraDefault;
+  final double precioVentaDefaultMenor;
+  final double precioVentaDefaultMayor;
+  final double? precioPaquete; // Nuevo campo
   final bool requiereColor;
   final String? codigoColor;
   final String categoria;
@@ -18,26 +19,31 @@ class TipoProducto {
   final bool deleted;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? createdBy; // Nuevo campo
+  final String? updatedBy; // Nuevo campo
 
   TipoProducto({
     required this.id,
     required this.idEmpresa,
     required this.nombre,
-    this.descripcion, // Ahora es opcional
+    this.descripcion,
     required this.unidadMedida,
     required this.cantidadesPosibles,
     required this.cantidadPrioritaria,
     required this.precioCompraDefault,
     required this.precioVentaDefaultMenor,
     required this.precioVentaDefaultMayor,
+    this.precioPaquete, // Nuevo campo
     required this.requiereColor,
-    this.codigoColor, // Nuevo campo
+    this.codigoColor,
     required this.categoria,
     this.permiteVentaParcial = true,
-    this.unidadMedidaSecundaria, // Nuevo campo
+    this.unidadMedidaSecundaria,
     this.deleted = false,
     required this.createdAt,
     required this.updatedAt,
+    this.createdBy, // Nuevo campo
+    this.updatedBy, // Nuevo campo
   });
 
   factory TipoProducto.fromJson(Map<String, dynamic> json, String id) {
@@ -53,7 +59,7 @@ class TipoProducto {
       id: id,
       idEmpresa: json['idEmpresa'] ?? '',
       nombre: json['nombre'] ?? '',
-      descripcion: json['descripcion'], // Puede ser nulo
+      descripcion: json['descripcion'],
       unidadMedida: json['unidadMedida'] ?? '',
       cantidadesPosibles: cantidades,
       cantidadPrioritaria: json['cantidadPrioritaria'] ?? 0,
@@ -62,14 +68,17 @@ class TipoProducto {
           .toDouble(),
       precioVentaDefaultMayor: (json['precioVentaDefaultMayor'] ?? 0)
           .toDouble(),
+      precioPaquete: json['precioPaquete']?.toDouble(), // Nuevo campo
       requiereColor: json['requiereColor'] ?? false,
-      codigoColor: json['codigoColor'], // Nuevo campo
+      codigoColor: json['codigoColor'],
       categoria: json['categoria'] ?? '',
       permiteVentaParcial: json['permiteVentaParcial'] ?? true,
-      unidadMedidaSecundaria: json['unidadMedidaSecundaria'], // Nuevo campo
+      unidadMedidaSecundaria: json['unidadMedidaSecundaria'],
       deleted: json['deleted'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+      createdBy: json['createdBy'], // Nuevo campo
+      updatedBy: json['updatedBy'], // Nuevo campo
     );
   }
 
@@ -77,7 +86,7 @@ class TipoProducto {
     return {
       'idEmpresa': idEmpresa,
       'nombre': nombre,
-      'descripcion': descripcion, // Puede ser nulo
+      'descripcion': descripcion,
       'unidadMedida': unidadMedida,
       'cantidadesPosibles': cantidadesPosibles
           .map((e) => e.toString())
@@ -86,14 +95,17 @@ class TipoProducto {
       'precioCompraDefault': precioCompraDefault,
       'precioVentaDefaultMenor': precioVentaDefaultMenor,
       'precioVentaDefaultMayor': precioVentaDefaultMayor,
+      'precioPaquete': precioPaquete, // Nuevo campo
       'requiereColor': requiereColor,
-      'codigoColor': codigoColor, // Nuevo campo
+      'codigoColor': codigoColor,
       'categoria': categoria,
       'permiteVentaParcial': permiteVentaParcial,
-      'unidadMedidaSecundaria': unidadMedidaSecundaria, // Nuevo campo
+      'unidadMedidaSecundaria': unidadMedidaSecundaria,
       'deleted': deleted,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'createdBy': createdBy, // Nuevo campo
+      'updatedBy': updatedBy, // Nuevo campo
     };
   }
 
@@ -107,18 +119,21 @@ class TipoProducto {
     double? precioCompraDefault,
     double? precioVentaDefaultMenor,
     double? precioVentaDefaultMayor,
+    double? precioPaquete, // Nuevo campo
     bool? requiereColor,
     String? codigoColor,
     String? categoria,
     bool? permiteVentaParcial,
     String? unidadMedidaSecundaria,
     bool? deleted,
+    String? createdBy, // Nuevo campo
+    String? updatedBy, // Nuevo campo
   }) {
     return TipoProducto(
       id: id,
       idEmpresa: idEmpresa ?? this.idEmpresa,
       nombre: nombre ?? this.nombre,
-      descripcion: descripcion, // Permite nulo
+      descripcion: descripcion ?? this.descripcion,
       unidadMedida: unidadMedida ?? this.unidadMedida,
       cantidadesPosibles: cantidadesPosibles ?? this.cantidadesPosibles,
       cantidadPrioritaria: cantidadPrioritaria ?? this.cantidadPrioritaria,
@@ -127,6 +142,7 @@ class TipoProducto {
           precioVentaDefaultMenor ?? this.precioVentaDefaultMenor,
       precioVentaDefaultMayor:
           precioVentaDefaultMayor ?? this.precioVentaDefaultMayor,
+      precioPaquete: precioPaquete ?? this.precioPaquete, // Nuevo campo
       requiereColor: requiereColor ?? this.requiereColor,
       codigoColor: codigoColor ?? this.codigoColor,
       categoria: categoria ?? this.categoria,
@@ -136,6 +152,8 @@ class TipoProducto {
       deleted: deleted ?? this.deleted,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
+      createdBy: createdBy ?? this.createdBy, // Nuevo campo
+      updatedBy: updatedBy ?? this.updatedBy, // Nuevo campo
     );
   }
 
@@ -150,12 +168,15 @@ class TipoProducto {
       precioCompraDefault: 0.0,
       precioVentaDefaultMenor: 0.0,
       precioVentaDefaultMayor: 0.0,
+      precioPaquete: null, // Nuevo campo
       requiereColor: false,
       categoria: '',
       permiteVentaParcial: false,
       deleted: false,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      createdBy: null, // Nuevo campo
+      updatedBy: null, // Nuevo campo
     );
   }
 }

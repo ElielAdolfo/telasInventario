@@ -12,17 +12,20 @@ class StockEmpresa {
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
+  final double? precioPaquete; // Nuevo campo: precio por paquete
   final DateTime fechaIngreso;
   final String? lote;
   final DateTime? fechaVencimiento;
   final String? observaciones;
   final bool deleted;
+  final DateTime? deletedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   int get cantidadDisponible => cantidad - cantidadReservado - cantidadAprobado;
 
   final String? createdBy;
   final String? updatedBy;
+  final String? deletedBy;
   // Campos adicionales copiados de TipoProducto
   final String categoria;
   final String nombre;
@@ -45,11 +48,13 @@ class StockEmpresa {
     required this.precioCompra,
     required this.precioVentaMenor,
     required this.precioVentaMayor,
+    this.precioPaquete, // Nuevo campo
     required this.fechaIngreso,
     this.lote,
     this.fechaVencimiento,
     this.observaciones,
     this.deleted = false,
+    this.deletedAt,
     required this.createdAt,
     required this.updatedAt,
     // Campos adicionales copiados de TipoProducto
@@ -63,6 +68,7 @@ class StockEmpresa {
     required this.cantidadPrioritaria,
     this.createdBy,
     this.updatedBy,
+    this.deletedBy,
   });
 
   // Modificado para recibir el ID como parámetro separado
@@ -88,6 +94,7 @@ class StockEmpresa {
       precioCompra: (json['precioCompra'] ?? 0).toDouble(),
       precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
       precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
+      precioPaquete: json['precioPaquete']?.toDouble(), // Nuevo campo
       fechaIngreso: json['fechaIngreso'] != null
           ? DateTime.parse(json['fechaIngreso'])
           : DateTime.now(),
@@ -97,6 +104,11 @@ class StockEmpresa {
           : null,
       observaciones: json['observaciones'],
       deleted: json['deleted'] ?? false,
+      deletedAt:
+          json['deletedAt'] !=
+              null // Nuevo campo
+          ? DateTime.parse(json['deletedAt'])
+          : null,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
@@ -114,6 +126,7 @@ class StockEmpresa {
       cantidadPrioritaria: json['cantidadPrioritaria'] ?? 0,
       createdBy: json['createdBy'],
       updatedBy: json['updatedBy'],
+      deletedBy: json['deletedBy'], // Nuevo campo
     );
   }
 
@@ -130,16 +143,19 @@ class StockEmpresa {
       'precioCompra': precioCompra,
       'precioVentaMenor': precioVentaMenor,
       'precioVentaMayor': precioVentaMayor,
+      'precioPaquete': precioPaquete, // Nuevo campo
       'fechaIngreso': fechaIngreso.toIso8601String(),
       'lote': lote,
       'fechaVencimiento': fechaVencimiento?.toIso8601String(),
       'observaciones': observaciones,
       'deleted': deleted,
+      'deletedAt': deletedAt?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
 
       'createdBy': createdBy,
       'updatedBy': updatedBy,
+      'deletedBy': deletedBy,
       'categoria': categoria,
       'nombre': nombre,
       'unidadMedida': unidadMedida,
@@ -163,11 +179,13 @@ class StockEmpresa {
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
+    double? precioPaquete, // Nuevo campo
     DateTime? fechaIngreso,
     String? lote,
     DateTime? fechaVencimiento,
     String? observaciones,
     bool? deleted,
+    DateTime? deletedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? categoria,
@@ -180,6 +198,7 @@ class StockEmpresa {
     int? cantidadPrioritaria,
     String? createdBy,
     String? updatedBy,
+    String? deletedBy,
   }) {
     return StockEmpresa(
       id: id ?? this.id,
@@ -193,6 +212,7 @@ class StockEmpresa {
       precioCompra: precioCompra ?? this.precioCompra,
       precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
       precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
+      precioPaquete: precioPaquete ?? this.precioPaquete, // Nuevo campo
       fechaIngreso: fechaIngreso ?? this.fechaIngreso,
       lote: lote ?? this.lote,
       fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
@@ -200,6 +220,7 @@ class StockEmpresa {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deleted: deleted ?? this.deleted,
+      deletedAt: deletedAt ?? this.deletedAt,
       categoria: categoria ?? this.categoria,
       nombre: nombre ?? this.nombre,
       unidadMedida: unidadMedida ?? this.unidadMedida,
@@ -211,6 +232,7 @@ class StockEmpresa {
       cantidadPrioritaria: cantidadPrioritaria ?? this.cantidadPrioritaria,
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
+      deletedBy: deletedBy ?? this.deletedBy,
     );
   }
 
@@ -229,8 +251,11 @@ class StockEmpresa {
       precioCompra: 0,
       precioVentaMayor: 0,
       precioVentaMenor: 0,
+      precioPaquete: null, // Nuevo campo
       unidades: 0,
       fechaIngreso: DateTime.now(),
+      deleted: false,
+      deletedAt: null,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       categoria: '',
@@ -243,6 +268,7 @@ class StockEmpresa {
       cantidadPrioritaria: 0,
       createdBy: null,
       updatedBy: null,
+      deletedBy: null,
     );
   }
 }
