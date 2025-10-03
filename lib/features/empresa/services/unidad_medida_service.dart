@@ -1,7 +1,4 @@
 // lib/features/producto/services/unidad_medida_service.dart
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/unidad_medida_model.dart';
 

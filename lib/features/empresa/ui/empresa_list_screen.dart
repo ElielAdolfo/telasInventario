@@ -4,8 +4,11 @@ import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/models/empresa_model.dart';
 import 'package:inventario/features/empresa/ui/asignar_stock_tienda_screen.dart';
 import 'package:inventario/features/empresa/ui/color_list_screen.dart';
+import 'package:inventario/features/empresa/ui/profile_screen.dart';
+import 'package:inventario/features/empresa/ui/role_management_screen.dart';
 import 'package:inventario/features/empresa/ui/tipo_producto_selection_screen.dart';
 import 'package:inventario/features/empresa/ui/unidad_medida_list_screen.dart';
+import 'package:inventario/features/empresa/ui/user_management_screen.dart';
 import 'package:provider/provider.dart';
 import '../logic/empresa_manager.dart';
 import 'empresa_form_screen.dart';
@@ -38,6 +41,28 @@ class _EmpresaListScreenState extends State<EmpresaListScreen> {
       appBar: AppBar(
         title: const Text('Administración de Empresas'),
         actions: [
+          Consumer<AuthManager>(
+            builder: (context, auth, child) {
+              return IconButton(
+                icon: CircleAvatar(
+                  radius: 14,
+                  backgroundImage: auth.user?.photoURL != null
+                      ? NetworkImage(auth.user!.photoURL!)
+                      : null,
+                  child: auth.user?.photoURL == null
+                      ? const Icon(Icons.person, size: 16)
+                      : null,
+                ),
+                onPressed: () => _navigateToProfile(context),
+                tooltip: 'Mi perfil',
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.admin_panel_settings),
+            onPressed: () => _navigateToRoleManagement(context),
+            tooltip: 'Gestionar roles',
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _navigateToForm(context),
@@ -107,6 +132,11 @@ class _EmpresaListScreenState extends State<EmpresaListScreen> {
                           onPressed: () =>
                               _navigateToAgregarStock(context, empresa),
                           tooltip: 'Agregar stock',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.people),
+                          onPressed: () => _navigateToUserManagement(context),
+                          tooltip: 'Administrar usuarios',
                         ),
                         // Botón para ver tipos de producto
                         IconButton(
@@ -189,6 +219,13 @@ class _EmpresaListScreenState extends State<EmpresaListScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const DeletedEmpresasScreen()),
+    );
+  }
+
+  void _navigateToUserManagement(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const UserManagementScreen()),
     );
   }
 
@@ -285,6 +322,21 @@ class _EmpresaListScreenState extends State<EmpresaListScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _navigateToProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ProfileScreen()),
+    );
+  }
+
+  // Función para navegar a la pantalla de gestión de roles
+  void _navigateToRoleManagement(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RoleManagementScreen()),
     );
   }
 }

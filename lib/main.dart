@@ -5,10 +5,12 @@ import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/carrito_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
 import 'package:inventario/features/empresa/logic/movimiento_stock_manager.dart';
+import 'package:inventario/features/empresa/logic/role_manager.dart';
 import 'package:inventario/features/empresa/logic/solicitud_traslado_manager.dart';
 import 'package:inventario/features/empresa/logic/stock_empresa_manager.dart';
 import 'package:inventario/features/empresa/logic/tipo_producto_manager.dart';
 import 'package:inventario/features/empresa/logic/unidad_medida_manager.dart';
+import 'package:inventario/features/empresa/logic/user_manager.dart';
 import 'package:inventario/features/empresa/logic/venta_manager.dart';
 import 'package:inventario/features/empresa/logic/venta_producto_manager.dart';
 import 'package:provider/provider.dart';
@@ -44,6 +46,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CarritoManager()),
         ChangeNotifierProvider(create: (_) => VentaManager()),
         ChangeNotifierProvider(create: (_) => VentaProductoManager()),
+        ChangeNotifierProvider(create: (_) => UserManager()),
+        ChangeNotifierProvider(create: (_) => RoleManager()),
       ],
       child: MaterialApp(
         title: 'Sistema de Gestión de Empresas',
