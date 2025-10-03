@@ -89,6 +89,11 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
+  void clearSelectedRole() {
+    _selectedRole = null;
+    notifyListeners();
+  }
+
   Future<void> _checkUserProfile() async {
     if (_user == null) return;
 
@@ -147,7 +152,7 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  void selectRole(UserRole role) {
+  void selectRole(UserRole? role) {
     _selectedRole = role;
     notifyListeners();
   }
@@ -170,6 +175,43 @@ class AuthManager extends ChangeNotifier {
         return '/tienda_list';
       default:
         return '/role_selection';
+    }
+  }
+
+  // Método para verificar si el usuario cumple los requisitos para un rol
+  Future<bool> meetsRoleRequirements(String roleName) async {
+    if (userProfile == null) return false;
+
+    switch (roleName.toLowerCase()) {
+      case 'administrador':
+        // El administrador no tiene requisitos especiales
+        return true;
+      case 'gerente':
+        // Verificar si tiene el rol de gerente con empresa asignada
+        return userProfile!.roles.any(
+          (r) =>
+              r.name.toLowerCase() == 'gerente' &&
+              r.empresaId != null &&
+              r.empresaNombre != null,
+        );
+      case 'vendedor':
+        // Verificar si tiene el rol de vendedor con empresa asignada
+        return userProfile!.roles.any(
+          (r) =>
+              r.name.toLowerCase() == 'vendedor' &&
+              r.empresaId != null &&
+              r.empresaNombre != null,
+        );
+      case 'almacenero':
+        // Verificar si tiene el rol de almacenero con empresa asignada
+        return userProfile!.roles.any(
+          (r) =>
+              r.name.toLowerCase() == 'almacenero' &&
+              r.empresaId != null &&
+              r.empresaNombre != null,
+        );
+      default:
+        return false;
     }
   }
 }

@@ -1,5 +1,7 @@
+// lib/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:inventario/auth_manager.dart';
+import 'package:inventario/features/empresa/ui/role_selection_screen.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -12,10 +14,24 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthManager>();
+
+    // Redirigir si ya está autenticado y tiene roles
+    if (auth.isLoggedIn && auth.hasAvailableRoles()) {
+      // Pequeña demora para permitir que el estado se actualice
+      Future.microtask(() {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const RoleSelectionScreen(),
+          ),
+        );
+      });
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -29,7 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Correo'),
+                keyboardType: TextInputType.emailAddress,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Contraseña'),
@@ -37,26 +55,70 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               if (auth.errorMessage != null)
-                Text(
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Text(
                   auth.errorMessage!,
                   style: const TextStyle(color: Colors.red),
                 ),
+                ),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: () async {
+                        setState(() {
+                          _isLoading = true;
+                        });
+                        
+                        await auth.signIn(
+                          _emailController.text,
+                          _passwordController.text,
+                        );
+                        
+                        setState(() {
+                          _isLoading = false;
+                        });
+                        
+                        // Si el inicio de sesión fue exitoso y el usuario tiene roles
+                        if (auth.isLoggedIn && auth.hasAvailableRoles()) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RoleSelectionScreen(),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      child: const Text('Iniciar sesión'),
+                    ),
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  await auth.signIn(
-                    _emailController.text,
-                    _passwordController.text,
-                  );
-                },
-                child: const Text('Iniciar sesión'),
-              ),
               TextButton(
                 onPressed: () async {
+                  setState(() {
+                    _isLoading = true;
+                  });
+                  
                   await auth.register(
                     _emailController.text,
                     _passwordController.text,
                   );
+                  
+                  setState(() {
+                    _isLoading = false;
+                  });
+                  
+                  // Si el registro fue exitoso y el usuario tiene roles
+                  if (auth.isLoggedIn && auth.hasAvailableRoles()) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RoleSelectionScreen(),
+                      ),
+                    );
+                  }
                 },
                 child: const Text('Registrarse'),
               ),
