@@ -462,12 +462,15 @@ class _TipoProductoSelectionScreenState
     final formKey = GlobalKey<FormState>();
     final nombreController = TextEditingController();
     final descripcionController = TextEditingController();
-    List<int> cantidadesPosibles = [50, 70, 100];
-    int cantidadPrioritaria = 50;
     final precioCompraDefaultController = TextEditingController();
     final precioVentaDefaultMenorController = TextEditingController();
     final precioVentaDefaultMayorController = TextEditingController();
-    final categoriaController = TextEditingController();
+    final categoriaRController = TextEditingController();
+
+    final precioPaqueteRController = TextEditingController();
+
+    List<int> cantidadesPosibles = [50, 70, 100];
+    int cantidadPrioritaria = 50;
     bool requiereColor = true;
     bool permiteVentaParcial = true;
     String? codigoColor;
@@ -484,9 +487,6 @@ class _TipoProductoSelectionScreenState
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) {
-          // Agregar controlador para el precio por paquete
-          final precioPaqueteController = TextEditingController();
-
           return AlertDialog(
             title: const Text('Nuevo Tipo de Producto'),
             content: SingleChildScrollView(
@@ -708,13 +708,23 @@ class _TipoProductoSelectionScreenState
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
-                    const SizedBox(height: 8),
 
                     // Campo Precio de Compra con validaciones
+                    Divider(),
+
+                    Text(
+                      'Precio:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
                     TextFormField(
                       controller: precioCompraDefaultController,
                       decoration: const InputDecoration(
-                        labelText: 'Precio de Compra por Defecto',
+                        labelText: 'De Compra',
                         hintText: 'Ej: 150.00',
                         prefixIcon: Icon(Icons.money_off),
                         border: OutlineInputBorder(),
@@ -740,42 +750,42 @@ class _TipoProductoSelectionScreenState
                         return null;
                       },
                     ),
+
                     const SizedBox(height: 8),
 
-                    // Campo Precio Venta Menor con validaciones
+                    // NUEVO: Campo Precio por Paquete con validaciones
                     TextFormField(
-                      controller: precioVentaDefaultMenorController,
+                      controller: precioPaqueteRController,
                       decoration: const InputDecoration(
-                        labelText: 'Precio de Venta por Defecto (Menor)',
-                        hintText: 'Ej: 170.00',
-                        prefixIcon: Icon(Icons.trending_down),
+                        labelText: 'Por Rollo',
+                        hintText: 'Ej: 500.00',
+                        prefixIcon: Icon(Icons.inventory_2),
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'El precio es obligatorio';
+                        if (value != null && value.isNotEmpty) {
+                          final num = double.tryParse(value);
+                          if (num == null) {
+                            return 'Debe ser un número válido';
+                          }
+                          if (value.contains('.') &&
+                              value.split('.')[1].length > 2) {
+                            return 'Máximo 2 decimales';
+                          }
+                          if (num <= 0) {
+                            return 'Debe ser mayor que cero';
+                          }
+                          final compra = double.tryParse(
+                            precioCompraDefaultController.text,
+                          );
+                          if (compra != null && num <= compra) {
+                            return 'Debe ser mayor al precio de compra';
+                          }
                         }
-                        final num = double.tryParse(value);
-                        if (num == null) {
-                          return 'Debe ser un número válido';
-                        }
-                        if (value.contains('.') &&
-                            value.split('.')[1].length > 2) {
-                          return 'Máximo 2 decimales';
-                        }
-                        if (num <= 0) {
-                          return 'Debe ser mayor que cero';
-                        }
-                        final compra = double.tryParse(
-                          precioCompraDefaultController.text,
-                        );
-                        if (compra != null && num <= compra) {
-                          return 'Debe ser mayor al precio de compra';
-                        }
-                        return null;
+                        return null; // Es opcional, así que no es obligatorio
                       },
                     ),
                     const SizedBox(height: 8),
@@ -784,7 +794,7 @@ class _TipoProductoSelectionScreenState
                     TextFormField(
                       controller: precioVentaDefaultMayorController,
                       decoration: const InputDecoration(
-                        labelText: 'Precio de Venta por Defecto (Mayor)',
+                        labelText: 'Por Mayor',
                         hintText: 'Ej: 190.00',
                         prefixIcon: Icon(Icons.trending_up),
                         border: OutlineInputBorder(),
@@ -807,100 +817,52 @@ class _TipoProductoSelectionScreenState
                         if (num <= 0) {
                           return 'Debe ser mayor que cero';
                         }
-                        final menor = double.tryParse(
-                          precioVentaDefaultMenorController.text,
+                        final rollo = double.tryParse(
+                          precioPaqueteRController.text,
                         );
-                        if (menor != null && num <= menor) {
-                          return 'Debe ser mayor al precio menor';
+                        if (rollo != null && num <= rollo) {
+                          return 'Debe ser mayor al precio por rollo';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 8),
 
-                    // NUEVO: Campo Precio por Paquete con validaciones
+                    // Campo Precio Venta Menor con validaciones
                     TextFormField(
-                      controller: precioPaqueteController,
+                      controller: precioVentaDefaultMenorController,
                       decoration: const InputDecoration(
-                        labelText: 'Precio por Paquete',
-                        hintText: 'Ej: 500.00',
-                        prefixIcon: Icon(Icons.inventory_2),
+                        labelText: 'Por Menor',
+                        hintText: 'Ej: 170.00',
+                        prefixIcon: Icon(Icons.trending_down),
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       validator: (value) {
-                        if (value != null && value.isNotEmpty) {
-                          final num = double.tryParse(value);
-                          if (num == null) {
-                            return 'Debe ser un número válido';
-                          }
-                          if (value.contains('.') &&
-                              value.split('.')[1].length > 2) {
-                            return 'Máximo 2 decimales';
-                          }
-                          if (num <= 0) {
-                            return 'Debe ser mayor que cero';
-                          }
+                        if (value == null || value.trim().isEmpty) {
+                          return 'El precio es obligatorio';
                         }
-                        return null; // Es opcional, así que no es obligatorio
-                      },
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Campo Categoría con Autocomplete y validaciones
-                    Autocomplete<String>(
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text.isEmpty) {
-                          return const Iterable<String>.empty();
+                        final num = double.tryParse(value);
+                        if (num == null) {
+                          return 'Debe ser un número válido';
                         }
-                        return categoriasExistentes.where((String option) {
-                          return option.toLowerCase().contains(
-                            textEditingValue.text.toLowerCase(),
-                          );
-                        });
+                        if (value.contains('.') &&
+                            value.split('.')[1].length > 2) {
+                          return 'Máximo 2 decimales';
+                        }
+                        if (num <= 0) {
+                          return 'Debe ser mayor que cero';
+                        }
+                        final mayor = double.tryParse(
+                          precioVentaDefaultMayorController.text,
+                        );
+                        if (mayor != null && num <= mayor) {
+                          return 'Debe ser mayor al precio por mayor';
+                        }
+                        return null;
                       },
-                      onSelected: (String selection) {
-                        categoriaController.text = selection;
-                      },
-                      fieldViewBuilder:
-                          (
-                            BuildContext context,
-                            TextEditingController fieldTextEditingController,
-                            FocusNode fieldFocusNode,
-                            VoidCallback onFieldSubmitted,
-                          ) {
-                            fieldTextEditingController.text =
-                                categoriaController.text;
-
-                            categoriaController.addListener(() {
-                              fieldTextEditingController.text =
-                                  categoriaController.text;
-                            });
-
-                            return TextFormField(
-                              controller: fieldTextEditingController,
-                              focusNode: fieldFocusNode,
-                              decoration: const InputDecoration(
-                                labelText: 'Categoría',
-                                hintText: 'Ej: Telas, Accesorios, Herramientas',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.category),
-                                counterText: '',
-                              ),
-                              maxLength: 30,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'La categoría es obligatoria';
-                                }
-                                if (value.trim().length > 30) {
-                                  return 'Máximo 30 caracteres';
-                                }
-                                return null;
-                              },
-                            );
-                          },
                     ),
                     const SizedBox(height: 8),
 
@@ -996,6 +958,61 @@ class _TipoProductoSelectionScreenState
                         },
                       ),
                     ],
+
+                    // Campo Categoría con Autocomplete y validaciones
+                    Autocomplete<String>(
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) {
+                          return const Iterable<String>.empty();
+                        }
+                        return categoriasExistentes.where((String option) {
+                          return option.toLowerCase().contains(
+                            textEditingValue.text.toLowerCase(),
+                          );
+                        });
+                      },
+                      onSelected: (String selection) {
+                        categoriaRController.text = selection;
+                      },
+                      fieldViewBuilder:
+                          (
+                            BuildContext context,
+                            TextEditingController fieldTextEditingController,
+                            FocusNode fieldFocusNode,
+                            VoidCallback onFieldSubmitted,
+                          ) {
+                            fieldTextEditingController.text =
+                                categoriaRController.text;
+
+                            categoriaRController.addListener(() {
+                              fieldTextEditingController.text =
+                                  categoriaRController.text;
+                            });
+
+                            return TextFormField(
+                              controller: fieldTextEditingController,
+                              focusNode: fieldFocusNode,
+                              decoration: const InputDecoration(
+                                labelText: 'Categoría',
+                                hintText: 'Ej: Telas, Accesorios, Herramientas',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.category),
+                                counterText: '',
+                              ),
+                              maxLength: 30,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'La categoría es obligatoria';
+                                }
+                                if (value.trim().length > 30) {
+                                  return 'Máximo 30 caracteres';
+                                }
+                                return null;
+                              },
+                            );
+                          },
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -1050,9 +1067,9 @@ class _TipoProductoSelectionScreenState
 
                     // Obtener el valor del precio por paquete (puede ser nulo)
                     double? precioPaquete;
-                    if (precioPaqueteController.text.isNotEmpty) {
+                    if (precioPaqueteRController.text.isNotEmpty) {
                       precioPaquete = double.tryParse(
-                        precioPaqueteController.text,
+                        precioPaqueteRController.text,
                       );
                     }
 
@@ -1081,7 +1098,7 @@ class _TipoProductoSelectionScreenState
                       codigoColor: requiereColor
                           ? codigoColor?.toUpperCase().trim()
                           : null,
-                      categoria: categoriaController.text.toUpperCase().trim(),
+                      categoria: categoriaRController.text.toUpperCase().trim(),
                       permiteVentaParcial: permiteVentaParcial,
                       unidadMedidaSecundaria: permiteVentaParcial
                           ? unidadMedidaSecundaria

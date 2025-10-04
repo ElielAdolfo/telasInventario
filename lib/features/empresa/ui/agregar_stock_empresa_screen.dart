@@ -412,14 +412,22 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                   ),
                 ),
 
-              const SizedBox(height: 16),
+              // Campo Precio de Compra con validaciones
+              Divider(),
 
-              // Precio de compra
+              Text(
+                'Precio:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _precioCompraController,
                 decoration: const InputDecoration(
-                  labelText: 'Precio de Compra',
-                  hintText: 'Por unidad',
+                  labelText: 'De Compra',
+                  hintText: 'Por metro',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.money_off),
                 ),
@@ -438,40 +446,39 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
               const SizedBox(height: 16),
 
-              // Precio de venta menor
               TextFormField(
-                controller: _precioVentaMenorController,
+                controller: _precioPaqueteController,
                 decoration: const InputDecoration(
-                  labelText: 'Precio de Venta (Menor)',
-                  hintText: 'Por unidad',
+                  labelText: 'Por Rollo',
+                  hintText: 'Por metro',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.trending_down),
+                  prefixIcon: Icon(Icons.inventory_2),
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ingrese el precio de venta menor';
+                  if (value != null && value.isNotEmpty) {
+                    final precio = double.tryParse(value);
+                    if (precio == null || precio <= 0) {
+                      return 'Ingrese un precio válido';
+                    }
+
+                    final compra = double.tryParse(
+                      _precioCompraController.text,
+                    );
+                    if (compra != null && precio <= compra) {
+                      return 'Debe ser mayor al precio de compra';
+                    }
                   }
-                  final precio = double.tryParse(value);
-                  if (precio == null || precio <= 0) {
-                    return 'Ingrese un precio válido';
-                  }
-                  final compra = double.tryParse(_precioCompraController.text);
-                  if (compra != null && precio <= compra) {
-                    return 'Debe ser mayor al precio de compra';
-                  }
-                  return null;
+                  return null; // Es opcional
                 },
               ),
-
               const SizedBox(height: 16),
 
-              // Precio de venta mayor
               TextFormField(
                 controller: _precioVentaMayorController,
                 decoration: const InputDecoration(
-                  labelText: 'Precio de Venta (Mayor)',
-                  hintText: 'Por unidad',
+                  labelText: 'Por Mayor',
+                  hintText: 'Por metro',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.trending_up),
                 ),
@@ -484,37 +491,42 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                   if (precio == null || precio <= 0) {
                     return 'Ingrese un precio válido';
                   }
-                  final menor = double.tryParse(
-                    _precioVentaMenorController.text,
-                  );
-                  if (menor != null && precio <= menor) {
-                    return 'Debe ser mayor al precio menor';
+                  final rollo = double.tryParse(_precioPaqueteController.text);
+                  if (rollo != null && precio <= rollo) {
+                    return 'Debe ser mayor al precio por rollo';
                   }
                   return null;
                 },
               ),
 
               const SizedBox(height: 16),
-
               TextFormField(
-                controller: _precioPaqueteController,
+                controller: _precioVentaMenorController,
                 decoration: const InputDecoration(
-                  labelText: 'Precio por Paquete',
-                  hintText: 'Por paquete',
+                  labelText: 'Por Menor',
+                  hintText: 'Por metro',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.inventory_2),
+                  prefixIcon: Icon(Icons.trending_down),
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final precio = double.tryParse(value);
-                    if (precio == null || precio <= 0) {
-                      return 'Ingrese un precio válido';
-                    }
+                  if (value == null || value.isEmpty) {
+                    return 'Ingrese el precio de venta menor';
                   }
-                  return null; // Es opcional
+                  final precio = double.tryParse(value);
+                  if (precio == null || precio <= 0) {
+                    return 'Ingrese un precio válido';
+                  }
+                  final mayor = double.tryParse(
+                    _precioVentaMayorController.text,
+                  );
+                  if (mayor != null && precio <= mayor) {
+                    return 'Debe ser mayor al precio por mayor';
+                  }
+                  return null;
                 },
               ),
+
               const SizedBox(height: 16),
 
               // Lote

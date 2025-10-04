@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 abstract class BaseService {
   late final DatabaseReference dbRef;
 
-  // ✅ Método 1: Inicialización automática con el path principal
+  // 🔹 Define aquí el entorno: "prod", "dev" o "help"
+  static const String _environment = 'prod'; // <-- cambia según el entorno
+
   BaseService(String path) {
     dbRef = _createRef(path);
   }
@@ -17,13 +19,15 @@ abstract class BaseService {
 
   // ✅ Método 3 (interno): lógica compartida para evitar duplicación
   DatabaseReference _createRef(String path) {
+    final fullPath = '$_environment/$path'; // 👈 añade el entorno como raíz
+
     if (kIsWeb) {
       return FirebaseDatabase.instanceFor(
         app: Firebase.app(),
         databaseURL: 'https://inventario-de053-default-rtdb.firebaseio.com',
-      ).ref(path);
+      ).ref(fullPath);
     } else {
-      return FirebaseDatabase.instance.ref(path);
+      return FirebaseDatabase.instance.ref(fullPath);
     }
   }
 }
