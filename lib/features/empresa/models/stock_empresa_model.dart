@@ -21,11 +21,7 @@ class StockEmpresa {
   final DateTime? deletedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
-  int get cantidadDisponible => cantidad - cantidadReservado - cantidadAprobado;
-
-  final String? createdBy;
-  final String? updatedBy;
-  final String? deletedBy;
+  
   // Campos adicionales copiados de TipoProducto
   final String categoria;
   final String nombre;
@@ -35,6 +31,12 @@ class StockEmpresa {
   final bool requiereColor;
   final List<int> cantidadesPosibles;
   final int cantidadPrioritaria;
+  
+  final String? createdBy;
+  final String? updatedBy;
+  final String? deletedBy;
+  int get cantidadDisponible => cantidad - cantidadReservado - cantidadAprobado;
+  int get total => cantidad * unidades;
 
   StockEmpresa({
     required this.id,
@@ -48,7 +50,7 @@ class StockEmpresa {
     required this.precioCompra,
     required this.precioVentaMenor,
     required this.precioVentaMayor,
-    this.precioPaquete, // Nuevo campo
+    this.precioPaquete,
     required this.fechaIngreso,
     this.lote,
     this.fechaVencimiento,
@@ -66,24 +68,24 @@ class StockEmpresa {
     required this.requiereColor,
     required this.cantidadesPosibles,
     required this.cantidadPrioritaria,
+    // Campos de auditoría
     this.createdBy,
     this.updatedBy,
     this.deletedBy,
   });
 
-  // Modificado para recibir el ID como parámetro separado
+  // Factory constructor para crear desde JSON
   factory StockEmpresa.fromJson(Map<String, dynamic> json, [String? id]) {
+    // Convertir la lista de cantidades desde JSON
     List<int> cantidadesPosibles = [];
     if (json['cantidadesPosibles'] != null) {
-      cantidadesPosibles = List<int>.from(
-        json['cantidadesPosibles'].map((x) => int.parse(x.toString())),
-      );
+      for (var item in json['cantidadesPosibles']) {
+        cantidadesPosibles.add(int.parse(item.toString()));
+      }
     }
+
     return StockEmpresa(
-      id:
-          id ??
-          json['id'] ??
-          '', // Usamos el ID pasado como parámetro o el del JSON si existe
+      id: id ?? json['id'] ?? '',
       idEmpresa: json['idEmpresa'] ?? '',
       idTipoProducto: json['idTipoProducto'] ?? '',
       idColor: json['idColor'],
@@ -94,7 +96,7 @@ class StockEmpresa {
       precioCompra: (json['precioCompra'] ?? 0).toDouble(),
       precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
       precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
-      precioPaquete: json['precioPaquete']?.toDouble(), // Nuevo campo
+      precioPaquete: json['precioPaquete']?.toDouble(),
       fechaIngreso: json['fechaIngreso'] != null
           ? DateTime.parse(json['fechaIngreso'])
           : DateTime.now(),
@@ -104,9 +106,7 @@ class StockEmpresa {
           : null,
       observaciones: json['observaciones'],
       deleted: json['deleted'] ?? false,
-      deletedAt:
-          json['deletedAt'] !=
-              null // Nuevo campo
+      deletedAt: json['deletedAt'] != null
           ? DateTime.parse(json['deletedAt'])
           : null,
       createdAt: json['createdAt'] != null
@@ -124,12 +124,14 @@ class StockEmpresa {
       requiereColor: json['requiereColor'] ?? false,
       cantidadesPosibles: cantidadesPosibles,
       cantidadPrioritaria: json['cantidadPrioritaria'] ?? 0,
+      // Campos de auditoría
       createdBy: json['createdBy'],
       updatedBy: json['updatedBy'],
-      deletedBy: json['deletedBy'], // Nuevo campo
+      deletedBy: json['deletedBy'],
     );
   }
 
+  // Método para convertir a JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -143,7 +145,7 @@ class StockEmpresa {
       'precioCompra': precioCompra,
       'precioVentaMenor': precioVentaMenor,
       'precioVentaMayor': precioVentaMayor,
-      'precioPaquete': precioPaquete, // Nuevo campo
+      'precioPaquete': precioPaquete,
       'fechaIngreso': fechaIngreso.toIso8601String(),
       'lote': lote,
       'fechaVencimiento': fechaVencimiento?.toIso8601String(),
@@ -152,21 +154,25 @@ class StockEmpresa {
       'deletedAt': deletedAt?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-
-      'createdBy': createdBy,
-      'updatedBy': updatedBy,
-      'deletedBy': deletedBy,
+      // Campos adicionales copiados de TipoProducto
       'categoria': categoria,
       'nombre': nombre,
       'unidadMedida': unidadMedida,
       'unidadMedidaSecundaria': unidadMedidaSecundaria,
       'permiteVentaParcial': permiteVentaParcial,
       'requiereColor': requiereColor,
-      'cantidadesPosibles': cantidadesPosibles,
+      'cantidadesPosibles': cantidadesPosibles
+          .map((e) => e.toString())
+          .toList(),
       'cantidadPrioritaria': cantidadPrioritaria,
+      // Campos de auditoría
+      'createdBy': createdBy,
+      'updatedBy': updatedBy,
+      'deletedBy': deletedBy,
     };
   }
 
+  // Método para crear una copia con algunos campos modificados
   StockEmpresa copyWith({
     String? id,
     String? idEmpresa,
@@ -179,7 +185,7 @@ class StockEmpresa {
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
-    double? precioPaquete, // Nuevo campo
+    double? precioPaquete,
     DateTime? fechaIngreso,
     String? lote,
     DateTime? fechaVencimiento,
@@ -212,20 +218,19 @@ class StockEmpresa {
       precioCompra: precioCompra ?? this.precioCompra,
       precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
       precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
-      precioPaquete: precioPaquete ?? this.precioPaquete, // Nuevo campo
+      precioPaquete: precioPaquete ?? this.precioPaquete,
       fechaIngreso: fechaIngreso ?? this.fechaIngreso,
       lote: lote ?? this.lote,
       fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
       observaciones: observaciones ?? this.observaciones,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
       deleted: deleted ?? this.deleted,
       deletedAt: deletedAt ?? this.deletedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       categoria: categoria ?? this.categoria,
       nombre: nombre ?? this.nombre,
       unidadMedida: unidadMedida ?? this.unidadMedida,
-      unidadMedidaSecundaria:
-          unidadMedidaSecundaria ?? this.unidadMedidaSecundaria,
+      unidadMedidaSecundaria: unidadMedidaSecundaria ?? this.unidadMedidaSecundaria,
       permiteVentaParcial: permiteVentaParcial ?? this.permiteVentaParcial,
       requiereColor: requiereColor ?? this.requiereColor,
       cantidadesPosibles: cantidadesPosibles ?? this.cantidadesPosibles,
@@ -236,23 +241,20 @@ class StockEmpresa {
     );
   }
 
-  // Método para calcular el total
-  int get total => cantidad * unidades;
-
+  // Factory constructor para crear una instancia vacía
   static StockEmpresa empty() {
     return StockEmpresa(
       id: '',
+      idEmpresa: '',
+      idTipoProducto: '',
       cantidad: 0,
       cantidadReservado: 0,
       cantidadAprobado: 0,
-      idColor: null,
-      idEmpresa: '',
-      idTipoProducto: '',
-      precioCompra: 0,
-      precioVentaMayor: 0,
-      precioVentaMenor: 0,
-      precioPaquete: null, // Nuevo campo
       unidades: 0,
+      precioCompra: 0,
+      precioVentaMenor: 0,
+      precioVentaMayor: 0,
+      precioPaquete: null,
       fechaIngreso: DateTime.now(),
       deleted: false,
       deletedAt: null,
@@ -270,5 +272,42 @@ class StockEmpresa {
       updatedBy: null,
       deletedBy: null,
     );
+  }
+
+  @override
+  String toString() {
+    return 'StockEmpresa{'
+        'id: $id, '
+        'idEmpresa: $idEmpresa, '
+        'idTipoProducto: $idTipoProducto, '
+        'idColor: $idColor, '
+        'cantidad: $cantidad, '
+        'cantidadReservado: $cantidadReservado, '
+        'cantidadAprobado: $cantidadAprobado, '
+        'unidades: $unidades, '
+        'precioCompra: $precioCompra, '
+        'precioVentaMenor: $precioVentaMenor, '
+        'precioVentaMayor: $precioVentaMayor, '
+        'precioPaquete: $precioPaquete, '
+        'fechaIngreso: $fechaIngreso, '
+        'lote: $lote, '
+        'fechaVencimiento: $fechaVencimiento, '
+        'observaciones: $observaciones, '
+        'deleted: $deleted, '
+        'deletedAt: $deletedAt, '
+        'createdAt: $createdAt, '
+        'updatedAt: $updatedAt, '
+        'categoria: $categoria, '
+        'nombre: $nombre, '
+        'unidadMedida: $unidadMedida, '
+        'unidadMedidaSecundaria: $unidadMedidaSecundaria, '
+        'permiteVentaParcial: $permiteVentaParcial, '
+        'requiereColor: $requiereColor, '
+        'cantidadesPosibles: $cantidadesPosibles, '
+        'cantidadPrioritaria: $cantidadPrioritaria, '
+        'createdBy: $createdBy, '
+        'updatedBy: $updatedBy, '
+        'deletedBy: $deletedBy'
+        '}';
   }
 }

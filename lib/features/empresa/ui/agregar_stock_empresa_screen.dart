@@ -3,11 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
-import 'package:inventario/features/empresa/logic/stock_empresa_manager.dart';
 import 'package:inventario/features/empresa/logic/tipo_producto_manager.dart';
+import 'package:inventario/features/empresa/models/bolsa_colores_model.dart';
+import 'package:inventario/features/empresa/models/color_con_cantidad_model.dart';
 import 'package:inventario/features/empresa/models/color_model.dart';
-import 'package:inventario/features/empresa/models/stock_empresa_model.dart';
 import 'package:inventario/features/empresa/models/tipo_producto_model.dart';
+import 'package:inventario/features/empresa/services/bolsa_colores_service.dart';
 import 'package:provider/provider.dart';
 
 class AgregarStockEmpresaScreen extends StatefulWidget {
@@ -29,35 +30,44 @@ class AgregarStockEmpresaScreen extends StatefulWidget {
 
 class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _cantidadController = TextEditingController();
-  final _unidadesController = TextEditingController();
   final _precioCompraController = TextEditingController();
   final _precioVentaMenorController = TextEditingController();
   final _precioVentaMayorController = TextEditingController();
-  final _precioPaqueteController = TextEditingController(); // Nuevo controlador
+  final _precioPaqueteController = TextEditingController();
   final _loteController = TextEditingController();
   final _observacionesController = TextEditingController();
   final _fechaVencimientoController = TextEditingController();
+  late final TextEditingController _cantidadPrioritariaController;
+  late final TextEditingController
+  _unidadesController; // CAMBIO 1: Controlador para unidades
 
   late final String? _userId;
+  final BolsaColoresService _bolsaColoresService = BolsaColoresService();
 
   TipoProducto? _tipoProductoSeleccionado;
   DateTime? _fechaVencimiento;
-  ColorProducto? _colorSeleccionado;
+  List<ColorConCantidad> _coloresSeleccionados = [];
   List<int> _cantidadesPosibles = [];
   int _cantidadPrioritaria = 0;
+  int _unidades = 1; // CAMBIO 2: Variable para almacenar unidades
 
   @override
   void initState() {
     super.initState();
+    // Inicializar controladores
+    _cantidadPrioritariaController = TextEditingController(
+      text: _cantidadPrioritaria.toString(),
+    );
+    _unidadesController = TextEditingController(
+      text: _unidades.toString(),
+    ); // CAMBIO 3: Inicializar controlador de unidades
+
     _tipoProductoSeleccionado = widget.tipoProducto;
 
-    // Si hay un producto preseleccionado, cargar sus datos
     if (_tipoProductoSeleccionado != null) {
       _cargarDatosProducto(_tipoProductoSeleccionado!);
     }
 
-    // Cargar tipos de producto de la empresa
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TipoProductoManager>(
         context,
@@ -74,43 +84,38 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
   @override
   void dispose() {
-    _cantidadController.dispose();
-    _unidadesController.dispose();
     _precioCompraController.dispose();
     _precioVentaMenorController.dispose();
     _precioVentaMayorController.dispose();
-    _precioPaqueteController.dispose(); // Disponer del nuevo controlador
+    _precioPaqueteController.dispose();
     _loteController.dispose();
     _observacionesController.dispose();
     _fechaVencimientoController.dispose();
+    _cantidadPrioritariaController.dispose();
+    _unidadesController
+        .dispose(); // CAMBIO 4: Disponer del controlador de unidades
     super.dispose();
   }
 
-  // Método para cargar los datos del producto seleccionado
   void _cargarDatosProducto(TipoProducto producto) {
     setState(() {
       _tipoProductoSeleccionado = producto;
       _cantidadesPosibles = List<int>.from(producto.cantidadesPosibles);
       _cantidadPrioritaria = producto.cantidadPrioritaria;
+      _cantidadPrioritariaController.text = producto.cantidadPrioritaria
+          .toString();
 
-      // Precargar precios por defecto
       _precioCompraController.text = producto.precioCompraDefault.toString();
       _precioVentaMenorController.text = producto.precioVentaDefaultMenor
           .toString();
       _precioVentaMayorController.text = producto.precioVentaDefaultMayor
           .toString();
 
-      // Precargar el precio por paquete si existe
       if (producto.precioPaquete != null) {
         _precioPaqueteController.text = producto.precioPaquete.toString();
       } else {
         _precioPaqueteController.clear();
       }
-
-      // Precargar la cantidad prioritaria en el campo de unidades
-      _unidadesController.text = producto.cantidadPrioritaria.toString();
-      // Inicializar cantidad en 1 por defecto
-      _cantidadController.text = '1';
     });
   }
 
@@ -153,78 +158,78 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
       return;
     }
 
-    // Validar color si el producto lo requiere
+    // Validar colores si el producto lo requiere
     if (_tipoProductoSeleccionado!.requiereColor &&
-        _colorSeleccionado == null) {
+        _coloresSeleccionados.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Debe seleccionar un color'),
+          content: Text('Debe seleccionar al menos un color'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    final stockManager = Provider.of<StockEmpresaManager>(
-      context,
-      listen: false,
-    );
-
-    // Obtener el valor del precio por paquete si existe
-    double? precioPaquete;
-    if (_precioPaqueteController.text.isNotEmpty) {
-      precioPaquete = double.tryParse(_precioPaqueteController.text);
-    }
-
-    final nuevoStock = StockEmpresa(
-      id: '',
-      idEmpresa: widget.idEmpresa,
-      idTipoProducto: _tipoProductoSeleccionado!.id,
-      idColor: _colorSeleccionado?.id,
-      cantidad: int.parse(_cantidadController.text),
-      unidades: int.parse(_unidadesController.text),
-      precioCompra: double.parse(_precioCompraController.text),
-      precioVentaMenor: double.parse(_precioVentaMenorController.text),
-      precioVentaMayor: double.parse(_precioVentaMayorController.text),
-      precioPaquete: precioPaquete, // Nuevo campo
-      fechaIngreso: DateTime.now(),
-      lote: _loteController.text.isNotEmpty ? _loteController.text : null,
-      fechaVencimiento: _fechaVencimiento,
-      observaciones: _observacionesController.text.isNotEmpty
-          ? _observacionesController.text
-          : null,
-      deleted: false,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      // Campos adicionales copiados del TipoProducto para mantener una copia independiente
-      categoria: _tipoProductoSeleccionado!.categoria,
-      nombre: _tipoProductoSeleccionado!.nombre,
-      unidadMedida: _tipoProductoSeleccionado!.unidadMedida,
-      unidadMedidaSecundaria: _tipoProductoSeleccionado?.unidadMedidaSecundaria,
-      permiteVentaParcial: _tipoProductoSeleccionado!.permiteVentaParcial,
-      requiereColor: _tipoProductoSeleccionado!.requiereColor,
-      // Copiamos las cantidades posibles y la cantidad prioritaria
-      cantidadesPosibles: _tipoProductoSeleccionado!.cantidadesPosibles,
-      cantidadPrioritaria: _tipoProductoSeleccionado!.cantidadPrioritaria,
-      createdBy: userId,
-      updatedBy: userId,
-      deletedBy: null,
-      deletedAt: null,
+    // Mostrar indicador de progreso
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Procesando colores...'),
+          ],
+        ),
+      ),
     );
 
     try {
-      await stockManager.addStockEmpresa(nuevoStock, userId);
+      // Crear la bolsa de colores
+      final bolsa = BolsaColores(
+        idTipoProducto: _tipoProductoSeleccionado!.id,
+        entradas: _coloresSeleccionados,
+        observaciones: _observacionesController.text.isNotEmpty
+            ? _observacionesController.text
+            : null,
+      );
+
+      // Procesar la bolsa de colores
+      await _bolsaColoresService.procesarBolsaColores(
+        bolsa,
+        widget.idEmpresa,
+        userId,
+        // Campos adicionales del TipoProducto
+        _tipoProductoSeleccionado!.categoria,
+        _tipoProductoSeleccionado!.nombre,
+        _tipoProductoSeleccionado!.unidadMedida,
+        _tipoProductoSeleccionado?.unidadMedidaSecundaria,
+        _tipoProductoSeleccionado!.permiteVentaParcial,
+        _tipoProductoSeleccionado!.requiereColor,
+        _tipoProductoSeleccionado!.cantidadesPosibles,
+        _tipoProductoSeleccionado!.cantidadPrioritaria,
+      );
+
+      // Cerrar diálogo de progreso
+      Navigator.pop(context);
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Stock agregado correctamente'),
+          SnackBar(
+            content: Text(
+              'Se agregaron ${_coloresSeleccionados.length} registros de stock correctamente',
+            ),
             backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
+      // Cerrar diálogo de progreso
+      Navigator.pop(context);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -234,6 +239,77 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
         );
       }
     }
+  }
+
+  // Método para agregar un nuevo color
+  void _agregarColor(ColorProducto color) {
+    // CAMBIO 5: Validar que los campos obligatorios estén llenos
+    if (_cantidadPrioritaria <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debe ingresar una cantidad válida'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_unidades <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debe ingresar una cantidad de unidades válida'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Obtener valores por defecto de los campos globales
+    final precioCompra = double.tryParse(_precioCompraController.text) ?? 0.0;
+    final precioVentaMenor =
+        double.tryParse(_precioVentaMenorController.text) ?? 0.0;
+    final precioVentaMayor =
+        double.tryParse(_precioVentaMayorController.text) ?? 0.0;
+    final precioPaquete = _precioPaqueteController.text.isNotEmpty
+        ? double.tryParse(_precioPaqueteController.text)
+        : null;
+
+    setState(() {
+      _coloresSeleccionados.add(
+        ColorConCantidad(
+          color: color,
+          cantidad: _cantidadPrioritaria,
+          unidades: _unidades,
+          precioCompra: precioCompra,
+          precioVentaMenor: precioVentaMenor,
+          precioVentaMayor: precioVentaMayor,
+          precioPaquete: precioPaquete,
+          lote: _loteController.text.isNotEmpty ? _loteController.text : null,
+          fechaVencimiento: _fechaVencimiento,
+          observaciones: _observacionesController.text.isNotEmpty
+              ? _observacionesController.text
+              : null,
+        ),
+      );
+
+      // CAMBIO 6: Resetear campos después de agregar
+      _unidades = 1;
+      _unidadesController.text = '1';
+    });
+  }
+
+  // Método para actualizar una entrada de color
+  void _actualizarEntradaColor(int index, ColorConCantidad nuevaEntrada) {
+    setState(() {
+      _coloresSeleccionados[index] = nuevaEntrada;
+    });
+  }
+
+  // Método para eliminar una entrada de color
+  void _eliminarEntradaColor(int index) {
+    setState(() {
+      _coloresSeleccionados.removeAt(index);
+    });
   }
 
   @override
@@ -292,39 +368,97 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
               const SizedBox(height: 16),
 
-              // Cantidad por unidad (no enlazado con cantidades posibles)
-              TextFormField(
-                controller: _cantidadController,
-                decoration: InputDecoration(
-                  labelText: _tipoProductoSeleccionado != null
-                      ? 'Cantidad por ${_tipoProductoSeleccionado!.unidadMedida}'
-                      : 'Cantidad por unidad',
-                  hintText: _tipoProductoSeleccionado != null
-                      ? 'Ej: 20 ${_tipoProductoSeleccionado!.unidadMedida.toLowerCase()} por rollo'
-                      : 'Ej: 20 metros por rollo',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.straighten),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ingrese la cantidad por unidad';
-                  }
-                  final cantidad = int.tryParse(value);
-                  if (cantidad == null || cantidad <= 0) {
-                    return 'Ingrese una cantidad válida';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
               // Mostrar cantidades posibles si hay un producto seleccionado y permite venta parcial
               if (_tipoProductoSeleccionado != null &&
                   _tipoProductoSeleccionado!.permiteVentaParcial) ...[
+                // CAMBIO 7: Campo de unidades encima de cantidades posibles
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _unidadesController,
+                        decoration: InputDecoration(
+                          labelText: 'Unidades (rollos)',
+                          hintText: 'Número de rollos',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.inventory_2),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final unidades = int.tryParse(value) ?? 1;
+                          setState(() {
+                            _unidades = unidades;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Ingrese el número de unidades';
+                          }
+                          final unidades = int.tryParse(value);
+                          if (unidades == null || unidades <= 0) {
+                            return 'Ingrese una cantidad válida';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            final unidades = _unidades + 1;
+                            setState(() {
+                              _unidades = unidades;
+                              _unidadesController.text = unidades.toString();
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(Icons.add, size: 18),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () {
+                            if (_unidades > 1) {
+                              final unidades = _unidades - 1;
+                              setState(() {
+                                _unidades = unidades;
+                                _unidadesController.text = unidades.toString();
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(Icons.remove, size: 18),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
                 const Text(
-                  'Cantidades Posibles:',
+                  'Cantidades Posibles (metros por rollo):',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -336,7 +470,8 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                       onPressed: () {
                         setState(() {
                           _cantidadPrioritaria = cantidad;
-                          _unidadesController.text = cantidad.toString();
+                          _cantidadPrioritariaController.text = cantidad
+                              .toString();
                         });
                       },
                       selected: _cantidadPrioritaria == cantidad,
@@ -345,73 +480,97 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                   }).toList(),
                 ),
                 const SizedBox(height: 8),
-                /*Text(
-                  'Cantidad Prioritaria: $_cantidadPrioritaria',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 16),*/
-              ],
 
-              // Unidades (enlazado con cantidades posibles)
-              TextFormField(
-                controller: _unidadesController,
-                decoration: InputDecoration(
-                  labelText:
-                      _tipoProductoSeleccionado != null &&
-                          _tipoProductoSeleccionado!.permiteVentaParcial
-                      ? 'Cantidad por ${_tipoProductoSeleccionado!.unidadMedidaSecundaria}'
-                      : 'Unidades',
-                  hintText:
-                      _tipoProductoSeleccionado != null &&
-                          _tipoProductoSeleccionado!.permiteVentaParcial
-                      ? 'Ej: 50 ${_tipoProductoSeleccionado!.unidadMedidaSecundaria.toString().toLowerCase()}'
-                      : 'Ej: 50 rollos',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return _tipoProductoSeleccionado != null &&
-                            _tipoProductoSeleccionado!.permiteVentaParcial
-                        ? 'Ingrese la cantidad por ${_tipoProductoSeleccionado!.unidadMedidaSecundaria}'
-                        : 'Ingrese el número de unidades';
-                  }
-                  final unidades = int.tryParse(value);
-                  if (unidades == null || unidades <= 0) {
-                    return 'Ingrese un número válido';
-                  }
-                  return null;
-                },
-              ),
-
-              // Mostrar total calculado
-              if (_cantidadController.text.isNotEmpty &&
-                  _unidadesController.text.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.0),
-                      border: Border.all(color: Theme.of(context).primaryColor),
-                    ),
-                    child: Text(
-                      'Total: ${int.parse(_cantidadController.text) * int.parse(_unidadesController.text)} ${_tipoProductoSeleccionado?.unidadMedidaSecundaria ?? ''}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16.0,
-                        color: Theme.of(context).primaryColor,
+                // Input de cantidad con botones de incremento/decremento
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _cantidadPrioritariaController,
+                        decoration: InputDecoration(
+                          labelText:
+                              'Cantidad por ${_tipoProductoSeleccionado!.unidadMedida}',
+                          hintText:
+                              'Ej: 20 ${_tipoProductoSeleccionado!.unidadMedida.toLowerCase()} por rollo',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.straighten),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final cantidad = int.tryParse(value) ?? 1;
+                          setState(() {
+                            _cantidadPrioritaria = cantidad;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Ingrese la cantidad por ${_tipoProductoSeleccionado!.unidadMedida}';
+                          }
+                          final cantidad = int.tryParse(value);
+                          if (cantidad == null || cantidad <= 0) {
+                            return 'Ingrese una cantidad válida';
+                          }
+                          return null;
+                        },
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            final cantidad = _cantidadPrioritaria + 1;
+                            setState(() {
+                              _cantidadPrioritaria = cantidad;
+                              _cantidadPrioritariaController.text = cantidad
+                                  .toString();
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(Icons.add, size: 18),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () {
+                            if (_cantidadPrioritaria > 1) {
+                              final cantidad = _cantidadPrioritaria - 1;
+                              setState(() {
+                                _cantidadPrioritaria = cantidad;
+                                _cantidadPrioritariaController.text = cantidad
+                                    .toString();
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(Icons.remove, size: 18),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-
+                const SizedBox(height: 16),
+              ],
               // Campo Precio de Compra con validaciones
               Divider(),
 
@@ -569,9 +728,13 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
               const SizedBox(height: 24),
 
+              // Selección múltiple de colores
               if (_tipoProductoSeleccionado?.requiereColor ?? false) ...[
-                const SizedBox(height: 16),
-
+                const Text(
+                  'Seleccionar colores:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
                 Consumer<ColorManager>(
                   builder: (context, manager, child) {
                     if (manager.isLoading) {
@@ -586,48 +749,68 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                       return const Text('No hay colores disponibles');
                     }
 
-                    return DropdownButtonFormField<ColorProducto>(
-                      value: _colorSeleccionado,
-                      decoration: const InputDecoration(
-                        labelText: 'Color',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.palette),
-                      ),
-                      items: manager.colores.map((color) {
-                        return DropdownMenuItem<ColorProducto>(
-                          value: color,
-                          child: Row(
+                    return Wrap(
+                      spacing: 8,
+                      children: manager.colores.map((color) {
+                        return FilterChip(
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 24,
-                                height: 24,
+                                width: 16,
+                                height: 16,
                                 decoration: BoxDecoration(
                                   color: _parseColor(color.codigoColor),
-                                  borderRadius: BorderRadius.circular(4),
+                                  shape: BoxShape.circle,
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(color.nombreColor),
                             ],
                           ),
+                          selected: false,
+                          onSelected: (selected) {
+                            if (selected) {
+                              _agregarColor(color);
+                            }
+                          },
+                          selectedColor: Theme.of(
+                            context,
+                          ).primaryColor.withOpacity(0.2),
+                          checkmarkColor: Theme.of(context).primaryColor,
                         );
                       }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _colorSeleccionado = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (_tipoProductoSeleccionado?.requiereColor ?? false) {
-                          if (value == null) {
-                            return 'Seleccione un color';
-                          }
-                        }
-                        return null;
-                      },
                     );
                   },
                 ),
+                const SizedBox(height: 16),
+
+                // Mostrar colores seleccionados con sus cantidades
+                if (_coloresSeleccionados.isNotEmpty) ...[
+                  const Text(
+                    'Colores seleccionados:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._coloresSeleccionados.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final colorConCantidad = entry.value;
+
+                    return _EntradaColorWidget(
+                      entrada: colorConCantidad,
+                      unidadMedida:
+                          _tipoProductoSeleccionado?.unidadMedida ?? '',
+                      cantidadesPosibles: _cantidadesPosibles,
+                      onChanged: (nuevaEntrada) {
+                        _actualizarEntradaColor(index, nuevaEntrada);
+                      },
+                      onRemove: () {
+                        _eliminarEntradaColor(index);
+                      },
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
+                ],
               ],
 
               // Botón de guardar
@@ -642,6 +825,478 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Color _parseColor(String hexColor) {
+    try {
+      hexColor = hexColor.replaceAll('#', '');
+      if (hexColor.length == 6) {
+        return Color(int.parse('FF$hexColor', radix: 16));
+      }
+      return Colors.grey;
+    } catch (e) {
+      return Colors.grey;
+    }
+  }
+}
+
+// Widget para cada entrada de color seleccionado
+class _EntradaColorWidget extends StatefulWidget {
+  final ColorConCantidad entrada;
+  final String unidadMedida;
+  final List<int> cantidadesPosibles;
+  final Function(ColorConCantidad) onChanged;
+  final VoidCallback onRemove;
+
+  const _EntradaColorWidget({
+    required this.entrada,
+    required this.unidadMedida,
+    required this.cantidadesPosibles,
+    required this.onChanged,
+    required this.onRemove,
+  });
+
+  @override
+  __EntradaColorWidgetState createState() => __EntradaColorWidgetState();
+}
+
+class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
+  late TextEditingController _cantidadController;
+  late TextEditingController _unidadesController;
+  late TextEditingController _precioCompraController;
+  late TextEditingController _precioVentaMenorController;
+  late TextEditingController _precioVentaMayorController;
+  late TextEditingController _precioPaqueteController;
+  late TextEditingController _loteController;
+  late TextEditingController _observacionesController;
+  late TextEditingController _fechaVencimientoController;
+  bool _expandido = false;
+  int _cantidadPrioritaria = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _cantidadController = TextEditingController(
+      text: widget.entrada.cantidad.toString(),
+    );
+    _unidadesController = TextEditingController(
+      text: widget.entrada.unidades.toString(),
+    );
+    _precioCompraController = TextEditingController(
+      text: widget.entrada.precioCompra.toString(),
+    );
+    _precioVentaMenorController = TextEditingController(
+      text: widget.entrada.precioVentaMenor.toString(),
+    );
+    _precioVentaMayorController = TextEditingController(
+      text: widget.entrada.precioVentaMayor.toString(),
+    );
+    _precioPaqueteController = TextEditingController(
+      text: widget.entrada.precioPaquete?.toString() ?? '',
+    );
+    _loteController = TextEditingController(text: widget.entrada.lote ?? '');
+    _observacionesController = TextEditingController(
+      text: widget.entrada.observaciones ?? '',
+    );
+    _fechaVencimientoController = TextEditingController(
+      text: widget.entrada.fechaVencimiento != null
+          ? "${widget.entrada.fechaVencimiento!.day.toString().padLeft(2, '0')}/${widget.entrada.fechaVencimiento!.month.toString().padLeft(2, '0')}/${widget.entrada.fechaVencimiento!.year}"
+          : '',
+    );
+
+    // Establecer la cantidad prioritaria inicial
+    _cantidadPrioritaria = widget.entrada.cantidad;
+  }
+
+  @override
+  void dispose() {
+    _cantidadController.dispose();
+    _unidadesController.dispose();
+    _precioCompraController.dispose();
+    _precioVentaMenorController.dispose();
+    _precioVentaMayorController.dispose();
+    _precioPaqueteController.dispose();
+    _loteController.dispose();
+    _observacionesController.dispose();
+    _fechaVencimientoController.dispose();
+    super.dispose();
+  }
+
+  void _actualizarEntrada() {
+    DateTime? fechaVencimiento;
+    if (_fechaVencimientoController.text.isNotEmpty) {
+      final partes = _fechaVencimientoController.text.split('/');
+      if (partes.length == 3) {
+        fechaVencimiento = DateTime(
+          int.parse(partes[2]),
+          int.parse(partes[1]),
+          int.parse(partes[0]),
+        );
+      }
+    }
+
+    final nuevaEntrada = widget.entrada.copyWith(
+      cantidad: int.tryParse(_cantidadController.text) ?? 1,
+      unidades: int.tryParse(_unidadesController.text) ?? 1,
+      precioCompra: double.tryParse(_precioCompraController.text) ?? 0.0,
+      precioVentaMenor:
+          double.tryParse(_precioVentaMenorController.text) ?? 0.0,
+      precioVentaMayor:
+          double.tryParse(_precioVentaMayorController.text) ?? 0.0,
+      precioPaquete: _precioPaqueteController.text.isNotEmpty
+          ? double.tryParse(_precioPaqueteController.text)
+          : null,
+      lote: _loteController.text.isNotEmpty ? _loteController.text : null,
+      fechaVencimiento: fechaVencimiento,
+      observaciones: _observacionesController.text.isNotEmpty
+          ? _observacionesController.text
+          : null,
+    );
+    widget.onChanged(nuevaEntrada);
+  }
+
+  Future<void> _selectFechaVencimiento() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        _fechaVencimientoController.text =
+            "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+        _actualizarEntrada();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        children: [
+          // Encabezado con color y botón de eliminar
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _parseColor(widget.entrada.color.codigoColor),
+                shape: BoxShape.circle,
+              ),
+            ),
+            title: Text(widget.entrada.color.nombreColor),
+            subtitle: Text(
+              '${widget.entrada.cantidad} ${widget.unidadMedida} x ${widget.entrada.unidades} unidades',
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    _expandido ? Icons.expand_less : Icons.expand_more,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _expandido = !_expandido;
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: widget.onRemove,
+                ),
+              ],
+            ),
+          ),
+
+          // Mostrar información básica incluso cuando no está expandido
+          if (!_expandido)
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.entrada.lote != null &&
+                      widget.entrada.lote!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.tag, size: 16, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Lote: ${widget.entrada.lote}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (widget.entrada.fechaVencimiento != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.event, size: 16, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Vence: ${widget.entrada.fechaVencimiento!.day.toString().padLeft(2, '0')}/${widget.entrada.fechaVencimiento!.month.toString().padLeft(2, '0')}/${widget.entrada.fechaVencimiento!.year}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (widget.entrada.observaciones != null &&
+                      widget.entrada.observaciones!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.note, size: 16, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Obs: ${widget.entrada.observaciones}',
+                              style: const TextStyle(fontSize: 14),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+          // Contenido expandible
+          if (_expandido)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // Campo de cantidad con botones de incremento/decremento
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _cantidadController,
+                          decoration: InputDecoration(
+                            labelText: 'Cantidad por ${widget.unidadMedida}',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            // Actualizar la cantidad prioritaria cuando cambie el valor
+                            final cantidad = int.tryParse(value) ?? 1;
+                            setState(() {
+                              _cantidadPrioritaria = cantidad;
+                            });
+                            _actualizarEntrada();
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              final cantidad =
+                                  int.tryParse(_cantidadController.text) ?? 1;
+                              _cantidadController.text = (cantidad + 1)
+                                  .toString();
+                              setState(() {
+                                _cantidadPrioritaria = cantidad + 1;
+                              });
+                              _actualizarEntrada();
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Icon(Icons.add, size: 18),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () {
+                              final cantidad =
+                                  int.tryParse(_cantidadController.text) ?? 1;
+                              if (cantidad > 1) {
+                                _cantidadController.text = (cantidad - 1)
+                                    .toString();
+                                setState(() {
+                                  _cantidadPrioritaria = cantidad - 1;
+                                });
+                                _actualizarEntrada();
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Icon(Icons.remove, size: 18),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Cantidades posibles
+                  if (widget.cantidadesPosibles.isNotEmpty) ...[
+                    const Text(
+                      'Cantidades Posibles:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: widget.cantidadesPosibles.map((cantidad) {
+                        return InputChip(
+                          label: Text('$cantidad'),
+                          onPressed: () {
+                            setState(() {
+                              _cantidadPrioritaria = cantidad;
+                              _cantidadController.text = cantidad.toString();
+                            });
+                            _actualizarEntrada();
+                          },
+                          selected: _cantidadPrioritaria == cantidad,
+                          selectedColor: Theme.of(context).primaryColor,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Campo de unidades
+                  TextFormField(
+                    controller: _unidadesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Unidades (rollos)',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => _actualizarEntrada(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Campos de precios
+                  const Text(
+                    'Precios:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _precioCompraController,
+                    decoration: const InputDecoration(
+                      labelText: 'De Compra',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => _actualizarEntrada(),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _precioPaqueteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Por Rollo',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => _actualizarEntrada(),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _precioVentaMayorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Por Mayor',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => _actualizarEntrada(),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _precioVentaMenorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Por Menor',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => _actualizarEntrada(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Campo de lote
+                  TextFormField(
+                    controller: _loteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Lote',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => _actualizarEntrada(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Campo de fecha de vencimiento
+                  TextFormField(
+                    controller: _fechaVencimientoController,
+                    decoration: const InputDecoration(
+                      labelText: 'Fecha de Vencimiento',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    readOnly: true,
+                    onTap: _selectFechaVencimiento,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Campo de observaciones
+                  TextFormField(
+                    controller: _observacionesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Observaciones',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                    onChanged: (_) => _actualizarEntrada(),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
