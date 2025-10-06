@@ -1,5 +1,3 @@
-// lib/features/solicitudes/models/solicitud_traslado_model.dart
-
 class SolicitudTraslado {
   final String id;
   final String idEmpresa;
@@ -7,6 +5,7 @@ class SolicitudTraslado {
   final String idStockOrigen;
   final String tipoSolicitud; // "EMPRESA_A_TIENDA" o "TIENDA_A_EMPRESA"
   final int cantidadSolicitada;
+  final double cantidad; // Nuevo campo: puede tener decimales
   final String
   estado; // RESERVADO, APROBADO, RECHAZADO, EN_TRASLADO, RECIBIDO, DEVUELTO, CANCELADO
   final DateTime fechaSolicitud;
@@ -32,8 +31,8 @@ class SolicitudTraslado {
   final String? unidadMedidaSecundaria;
   final bool permiteVentaParcial;
   final bool requiereColor;
-  final List<int> cantidadesPosibles;
-  final int cantidadPrioritaria;
+  final List<double> cantidadesPosibles;
+  final double cantidadPrioritaria;
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
@@ -54,6 +53,7 @@ class SolicitudTraslado {
   final String? createdBy;
   final String? updatedBy;
   final String? deletedBy;
+
   SolicitudTraslado({
     required this.id,
     required this.idEmpresa,
@@ -61,6 +61,7 @@ class SolicitudTraslado {
     required this.idStockOrigen,
     required this.tipoSolicitud,
     required this.cantidadSolicitada,
+    required this.cantidad, // Nuevo campo
     required this.estado,
     required this.fechaSolicitud,
     this.correlativo,
@@ -107,9 +108,9 @@ class SolicitudTraslado {
   });
 
   factory SolicitudTraslado.fromJson(Map<String, dynamic> json, String id) {
-    List<int> cantidadesPosibles = [];
+    List<double> cantidadesPosibles = [];
     if (json['cantidadesPosibles'] != null) {
-      cantidadesPosibles = List<int>.from(
+      cantidadesPosibles = List<double>.from(
         json['cantidadesPosibles'].map((x) => int.parse(x.toString())),
       );
     }
@@ -121,6 +122,7 @@ class SolicitudTraslado {
       idStockOrigen: json['idStockOrigen'] ?? '',
       tipoSolicitud: json['tipoSolicitud'] ?? '',
       cantidadSolicitada: json['cantidadSolicitada'] ?? 0,
+      cantidad: (json['cantidad'] ?? 0).toDouble(), // Nuevo campo
       estado: json['estado'] ?? '',
       fechaSolicitud: DateTime.parse(json['fechaSolicitud']),
       correlativo: json['correlativo'],
@@ -190,6 +192,7 @@ class SolicitudTraslado {
       'idStockOrigen': idStockOrigen,
       'tipoSolicitud': tipoSolicitud,
       'cantidadSolicitada': cantidadSolicitada,
+      'cantidad': cantidad, // Nuevo campo
       'estado': estado,
       'fechaSolicitud': fechaSolicitud.toIso8601String(),
       'correlativo': correlativo,
@@ -259,12 +262,13 @@ class SolicitudTraslado {
     String? unidadMedidaSecundaria,
     bool? permiteVentaParcial,
     bool? requiereColor,
-    List<int>? cantidadesPosibles,
-    int? cantidadPrioritaria,
+    List<double>? cantidadesPosibles,
+    double? cantidadPrioritaria,
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
     double? precioPaquete, // Nuevo campo
+    double? cantidad, // Nuevo campo en copyWith
     String? lote,
     DateTime? fechaVencimiento,
     String? colorNombre,
@@ -287,6 +291,7 @@ class SolicitudTraslado {
       idStockOrigen: idStockOrigen,
       tipoSolicitud: tipoSolicitud,
       cantidadSolicitada: cantidadSolicitada,
+      cantidad: cantidad ?? this.cantidad, // Nuevo campo
       estado: estado ?? this.estado,
       fechaSolicitud: fechaSolicitud ?? this.fechaSolicitud,
       correlativo: correlativo ?? this.correlativo,

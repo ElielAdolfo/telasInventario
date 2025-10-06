@@ -295,8 +295,8 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
                 TableRow(
                   decoration: BoxDecoration(color: Colors.grey[200]),
                   children: [
-                    _buildTableCell('Disponible', isHeader: true),
-                    _buildTableCell('Unidades', isHeader: true),
+                    _buildTableCell('Rollos', isHeader: true),
+                    _buildTableCell('Metros', isHeader: true),
                     _buildTableCell('Añadir', isHeader: true),
                   ],
                 ),
@@ -310,11 +310,11 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
                   return TableRow(
                     children: [
                       _buildTableCell('${stock.cantidadDisponible}'),
-                      _buildTableCell('${stock.unidades}'),
+                      _buildTableCell('${stock.cantidad}'),
                       _buildTableCell(
                         '',
                         isButton: true,
-                        onPressed: stock.cantidadDisponible > 0
+                        onPressed: stock.unidades > 0
                             ? () => _agregarProductoALista(stock)
                             : null, // Deshabilitar si no hay stock disponible
                       ),
@@ -578,12 +578,14 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           idStockOrigen: stock.id,
           tipoSolicitud: 'EMPRESA_A_TIENDA',
           cantidadSolicitada: cantidad,
+          cantidad: stock.cantidad,
           estado: 'RESERVADO', // Estado inicial según el nuevo flujo
           fechaSolicitud: DateTime.now(),
           motivo: _observacionesController.text.isNotEmpty
               ? _observacionesController.text
-              : null,          
-              solicitadoPor: _userId ?? 'usuario_actual', // Usar el ID del usuario actual
+              : null,
+          solicitadoPor:
+              _userId ?? 'usuario_actual', // Usar el ID del usuario actual
           // No se establece aprobadoPor ni fechaAprobacion hasta que se apruebe
 
           // Campos copiados de StockEmpresa para mantener un registro histórico
@@ -603,7 +605,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           fechaVencimiento: stock.fechaVencimiento,
           colorNombre: _colorSeleccionado?.nombreColor,
           colorCodigo: _colorSeleccionado?.codigoColor,
-          
+
           // Campos de auditoría
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),

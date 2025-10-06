@@ -345,7 +345,7 @@ class _DetalleSolicitudScreenState extends State<DetalleSolicitudScreen> {
         ElevatedButton.icon(
           onPressed: _aprobacionBloqueada ? null : () => _aprobarSolicitud(),
           icon: const Icon(Icons.check),
-          label: const Text('Aprobar'),
+          label: const Text('Aprobar Solicitud'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             minimumSize: const Size(120, 48),

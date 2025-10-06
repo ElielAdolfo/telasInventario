@@ -5,8 +5,8 @@ class TipoProducto {
   final String nombre;
   final String? descripcion;
   final String unidadMedida;
-  final List<int> cantidadesPosibles;
-  final int cantidadPrioritaria;
+  final List<double> cantidadesPosibles;
+  final double cantidadPrioritaria;
   final double precioCompraDefault;
   final double precioVentaDefaultMenor;
   final double precioVentaDefaultMayor;
@@ -48,10 +48,10 @@ class TipoProducto {
 
   factory TipoProducto.fromJson(Map<String, dynamic> json, String id) {
     // Convertir la lista de cantidades desde JSON
-    List<int> cantidades = [];
+    List<double> cantidades = [];
     if (json['cantidadesPosibles'] != null) {
       for (var item in json['cantidadesPosibles']) {
-        cantidades.add(int.parse(item.toString()));
+        cantidades.add(double.parse(item.toString()));
       }
     }
 
@@ -114,8 +114,8 @@ class TipoProducto {
     String? nombre,
     String? descripcion,
     String? unidadMedida,
-    List<int>? cantidadesPosibles,
-    int? cantidadPrioritaria,
+    List<double>? cantidadesPosibles,
+    double? cantidadPrioritaria,
     double? precioCompraDefault,
     double? precioVentaDefaultMenor,
     double? precioVentaDefaultMayor,

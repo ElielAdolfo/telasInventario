@@ -4,7 +4,7 @@ import 'package:inventario/features/empresa/models/color_model.dart';
 
 class ColorConCantidad {
   final ColorProducto color;
-  int cantidad; // Metros por rollo/paquete
+  double cantidad; // Metros por rollo/paquete
   int unidades; // Número de rollos/paquetes
   double precioCompra; // Precio específico para esta entrada
   double precioVentaMenor; // Precio específico para esta entrada
@@ -31,7 +31,7 @@ class ColorConCantidad {
   // Método copyWith para crear copias con algunos campos modificados
   ColorConCantidad copyWith({
     ColorProducto? color,
-    int? cantidad,
+    double? cantidad,
     int? unidades,
     double? precioCompra,
     double? precioVentaMenor,

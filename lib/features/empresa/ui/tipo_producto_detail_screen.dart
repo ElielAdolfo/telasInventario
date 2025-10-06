@@ -451,8 +451,10 @@ class TipoProductoDetailScreen extends StatelessWidget {
     final unidadMedidaController = TextEditingController(
       text: tipoProducto.unidadMedida,
     );
-    List<int> cantidadesPosibles = List.from(tipoProducto.cantidadesPosibles);
-    int cantidadPrioritaria = tipoProducto.cantidadPrioritaria;
+    List<double> cantidadesPosibles = List.from(
+      tipoProducto.cantidadesPosibles,
+    );
+    double cantidadPrioritaria = tipoProducto.cantidadPrioritaria;
 
     // Controladores para los tres tipos de precios
     final precioCompraController = TextEditingController(
@@ -541,7 +543,7 @@ class TipoProductoDetailScreen extends StatelessWidget {
                           ),
                           onSubmitted: (value) {
                             if (value.isNotEmpty) {
-                              final nuevaCantidad = int.tryParse(value);
+                              final nuevaCantidad = double.tryParse(value);
                               if (nuevaCantidad != null &&
                                   !cantidadesPosibles.contains(nuevaCantidad)) {
                                 setState(() {
@@ -574,7 +576,7 @@ class TipoProductoDetailScreen extends StatelessWidget {
                                 ),
                                 TextButton(
                                   onPressed: () {
-                                    final nuevaCantidad = int.tryParse(
+                                    final nuevaCantidad = double.tryParse(
                                       controller.text,
                                     );
                                     if (nuevaCantidad != null &&

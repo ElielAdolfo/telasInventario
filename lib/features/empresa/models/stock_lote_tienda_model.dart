@@ -3,8 +3,8 @@
 class StockLoteTienda {
   final String id;
   final String idStockTienda;
-  final int cantidad;
-  final int cantidadVendida;
+  final double cantidad;
+  final double cantidadVendida;
   final DateTime fechaApertura;
   final String abiertoPor;
   final bool estaCerrada;
@@ -29,7 +29,7 @@ class StockLoteTienda {
     required this.updatedAt,
   });
 
-  int get cantidadDisponible => cantidad - cantidadVendida;
+  double get cantidadDisponible => cantidad - cantidadVendida;
 
   factory StockLoteTienda.fromJson(Map<String, dynamic> json, String id) {
     return StockLoteTienda(
@@ -69,8 +69,8 @@ class StockLoteTienda {
   StockLoteTienda copyWith({
     String? id,
     String? idStockTienda,
-    int? cantidad,
-    int? cantidadVendida,
+    double? cantidad,
+    double? cantidadVendida,
     DateTime? fechaApertura,
     String? abiertoPor,
     bool? estaCerrada,

@@ -469,8 +469,8 @@ class _TipoProductoSelectionScreenState
 
     final precioPaqueteRController = TextEditingController();
 
-    List<int> cantidadesPosibles = [50, 70, 100];
-    int cantidadPrioritaria = 50;
+    List<double> cantidadesPosibles = [50, 70, 100];
+    double cantidadPrioritaria = 50;
     bool requiereColor = true;
     bool permiteVentaParcial = true;
     String? codigoColor;
@@ -625,7 +625,7 @@ class _TipoProductoSelectionScreenState
                             },
                             onSaved: (value) {
                               if (value != null && value.isNotEmpty) {
-                                final nuevaCantidad = int.tryParse(value);
+                                final nuevaCantidad = double.tryParse(value);
                                 if (nuevaCantidad != null &&
                                     !cantidadesPosibles.contains(
                                       nuevaCantidad,
@@ -675,7 +675,7 @@ class _TipoProductoSelectionScreenState
                                   TextButton(
                                     onPressed: () {
                                       if (controller.text.isNotEmpty) {
-                                        final nuevaCantidad = int.tryParse(
+                                        final nuevaCantidad = double.tryParse(
                                           controller.text,
                                         );
                                         if (nuevaCantidad != null &&

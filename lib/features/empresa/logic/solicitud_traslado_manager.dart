@@ -271,7 +271,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
 
     try {
       final solicitud = await _service.getSolicitudById(idSolicitud);
-      print(solicitud.toString());
+      print("solicitud: " +solicitud.toString());
       if (solicitud == null) {
         _error = 'No se encontró la solicitud';
         _isLoading = false;
@@ -340,7 +340,8 @@ class SolicitudTrasladoManager with ChangeNotifier {
         idEmpresa: idEmpresa,
         idTipoProducto: solicitud.idTipoProducto,
         idColor: solicitud.idColor,
-        cantidad: solicitud.cantidadSolicitada,
+        cantidad: solicitud.cantidad,
+        unidades: solicitud.cantidadSolicitada,
         cantidadVendida: 0,
         precioCompra: solicitud.precioCompra,
         precioVentaMenor: solicitud.precioVentaMenor,
@@ -357,8 +358,6 @@ class SolicitudTrasladoManager with ChangeNotifier {
         unidadMedidaSecundaria: solicitud.unidadMedidaSecundaria,
         permiteVentaParcial: solicitud.permiteVentaParcial,
         requiereColor: solicitud.requiereColor,
-        cantidadesPosibles: solicitud.cantidadesPosibles,
-        cantidadPrioritaria: solicitud.cantidadPrioritaria,
         lote: solicitud.lote,
         fechaVencimiento: solicitud.fechaVencimiento,
         colorNombre: solicitud.colorNombre,

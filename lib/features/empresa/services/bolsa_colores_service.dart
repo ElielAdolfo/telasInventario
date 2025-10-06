@@ -21,8 +21,8 @@ class BolsaColoresService extends BaseService {
     String? unidadMedidaSecundaria,
     bool permiteVentaParcial,
     bool requiereColor,
-    List<int> cantidadesPosibles,
-    int cantidadPrioritaria,
+    List<double> cantidadesPosibles,
+    double cantidadPrioritaria,
   ) async {
     // Procesar cada entrada individualmente con sus propios atributos
     for (var entrada in bolsa.entradas) {

@@ -9,6 +9,7 @@ class StockEmpresaService extends BaseService {
   Future<String> createStockEmpresa(StockEmpresa stock, String userId) async {
     final newRef = dbRef.push();
     final newVar = stock.copyWith(
+      id: newRef.key!,
       deleted: false,
       createdBy: userId,
       createdAt: DateTime.now(),

@@ -277,7 +277,7 @@ class StockLoteTiendaManager extends ChangeNotifier {
   }
 
   /// Calcula el total de stock disponible en lotes abiertos
-  int getTotalStockDisponible() {
+  double getTotalStockDisponible() {
     return getLotesAbiertosDisponibles().fold(
       0,
       (total, lote) => total + lote.cantidadDisponible,
@@ -285,7 +285,7 @@ class StockLoteTiendaManager extends ChangeNotifier {
   }
 
   /// Calcula el total de stock vendido en lotes abiertos
-  int getTotalStockVendido() {
+  double getTotalStockVendido() {
     return getLotesAbiertosDisponibles().fold(
       0,
       (total, lote) => total + lote.cantidadVendida,

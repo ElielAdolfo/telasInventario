@@ -421,7 +421,7 @@ class VentaProductoManager extends ChangeNotifier {
 
   Future<bool> abrirUnidad(
     String idStockTienda,
-    int cantidadUnidades,
+    double cantidad,
     String abiertoPor,
     String idTienda,
   ) async {
@@ -436,7 +436,7 @@ class VentaProductoManager extends ChangeNotifier {
       }
 
       // Verificar si hay stock disponible para abrir
-      if (stockTienda.cantidadDisponible < cantidadUnidades) {
+      if (stockTienda.cantidadDisponible < cantidad) {
         _error =
             'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
         notifyListeners();
@@ -444,14 +444,11 @@ class VentaProductoManager extends ChangeNotifier {
       }
 
       // Crear un nuevo lote para cada unidad abierta
-      for (int i = 0; i < cantidadUnidades; i++) {
-        // Calcular la cantidad en unidad secundaria (ej: metros por rollo)
-        final cantidadUnidadSecundaria = stockTienda.cantidadPrioritaria;
-
+      for (int i = 0; i < cantidad; i++) {
         final nuevoLote = StockLoteTienda(
           id: '', // El ID será generado por Firebase
           idStockTienda: idStockTienda,
-          cantidad: cantidadUnidadSecundaria,
+          cantidad: cantidad,
           cantidadVendida: 0,
           fechaApertura: DateTime.now(),
           abiertoPor: abiertoPor,
@@ -473,7 +470,7 @@ class VentaProductoManager extends ChangeNotifier {
 
       // Actualizar el stock de tienda
       final stockActualizado = stockTienda.copyWith(
-        cantidadAperturada: stockTienda.cantidadAperturada + cantidadUnidades,
+        cantidadAperturada: stockTienda.cantidadAperturada + cantidad,
       );
 
       final resultado = await _stockTiendaService.updateStockTienda(

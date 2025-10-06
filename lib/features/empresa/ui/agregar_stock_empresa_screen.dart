@@ -1,5 +1,4 @@
 // lib/features/stock/ui/agregar_stock_empresa_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
@@ -9,6 +8,7 @@ import 'package:inventario/features/empresa/models/color_con_cantidad_model.dart
 import 'package:inventario/features/empresa/models/color_model.dart';
 import 'package:inventario/features/empresa/models/tipo_producto_model.dart';
 import 'package:inventario/features/empresa/services/bolsa_colores_service.dart';
+import 'package:inventario/features/empresa/ui/detalle_stock_screen.dart';
 import 'package:provider/provider.dart';
 
 class AgregarStockEmpresaScreen extends StatefulWidget {
@@ -38,8 +38,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
   final _observacionesController = TextEditingController();
   final _fechaVencimientoController = TextEditingController();
   late final TextEditingController _cantidadPrioritariaController;
-  late final TextEditingController
-  _unidadesController; // CAMBIO 1: Controlador para unidades
+  late final TextEditingController _unidadesController;
 
   late final String? _userId;
   final BolsaColoresService _bolsaColoresService = BolsaColoresService();
@@ -47,20 +46,17 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
   TipoProducto? _tipoProductoSeleccionado;
   DateTime? _fechaVencimiento;
   List<ColorConCantidad> _coloresSeleccionados = [];
-  List<int> _cantidadesPosibles = [];
-  int _cantidadPrioritaria = 0;
-  int _unidades = 1; // CAMBIO 2: Variable para almacenar unidades
+  List<double> _cantidadesPosibles = [];
+  double _cantidadPrioritaria = 0;
+  int _unidades = 1;
 
   @override
   void initState() {
     super.initState();
-    // Inicializar controladores
     _cantidadPrioritariaController = TextEditingController(
       text: _cantidadPrioritaria.toString(),
     );
-    _unidadesController = TextEditingController(
-      text: _unidades.toString(),
-    ); // CAMBIO 3: Inicializar controlador de unidades
+    _unidadesController = TextEditingController(text: _unidades.toString());
 
     _tipoProductoSeleccionado = widget.tipoProducto;
 
@@ -92,15 +88,14 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     _observacionesController.dispose();
     _fechaVencimientoController.dispose();
     _cantidadPrioritariaController.dispose();
-    _unidadesController
-        .dispose(); // CAMBIO 4: Disponer del controlador de unidades
+    _unidadesController.dispose();
     super.dispose();
   }
 
   void _cargarDatosProducto(TipoProducto producto) {
     setState(() {
       _tipoProductoSeleccionado = producto;
-      _cantidadesPosibles = List<int>.from(producto.cantidadesPosibles);
+      _cantidadesPosibles = List<double>.from(producto.cantidadesPosibles);
       _cantidadPrioritaria = producto.cantidadPrioritaria;
       _cantidadPrioritariaController.text = producto.cantidadPrioritaria
           .toString();
@@ -135,6 +130,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     }
   }
 
+  // Modificado para navegar a la nueva pantalla en lugar de guardar directamente
   void _guardarStock(String? userId) async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -170,80 +166,36 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
       return;
     }
 
-    // Mostrar indicador de progreso
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Procesando colores...'),
-          ],
+    // Navegar a la pantalla de detalle con los datos
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetalleStockScreen(
+          idEmpresa: widget.idEmpresa,
+          empresaNombre: widget.empresaNombre,
+          tipoProducto: _tipoProductoSeleccionado!,
+          coloresSeleccionados: _coloresSeleccionados,
+          userId: userId,
+          lote: _loteController.text.isNotEmpty ? _loteController.text : null,
+          fechaVencimiento: _fechaVencimiento,
+          observaciones: _observacionesController.text.isNotEmpty
+              ? _observacionesController.text
+              : null,
+          precioCompra: double.tryParse(_precioCompraController.text) ?? 0.0,
+          precioVentaMenor:
+              double.tryParse(_precioVentaMenorController.text) ?? 0.0,
+          precioVentaMayor:
+              double.tryParse(_precioVentaMayorController.text) ?? 0.0,
+          precioPaquete: _precioPaqueteController.text.isNotEmpty
+              ? double.tryParse(_precioPaqueteController.text)
+              : null,
         ),
       ),
     );
-
-    try {
-      // Crear la bolsa de colores
-      final bolsa = BolsaColores(
-        idTipoProducto: _tipoProductoSeleccionado!.id,
-        entradas: _coloresSeleccionados,
-        observaciones: _observacionesController.text.isNotEmpty
-            ? _observacionesController.text
-            : null,
-      );
-
-      // Procesar la bolsa de colores
-      await _bolsaColoresService.procesarBolsaColores(
-        bolsa,
-        widget.idEmpresa,
-        userId,
-        // Campos adicionales del TipoProducto
-        _tipoProductoSeleccionado!.categoria,
-        _tipoProductoSeleccionado!.nombre,
-        _tipoProductoSeleccionado!.unidadMedida,
-        _tipoProductoSeleccionado?.unidadMedidaSecundaria,
-        _tipoProductoSeleccionado!.permiteVentaParcial,
-        _tipoProductoSeleccionado!.requiereColor,
-        _tipoProductoSeleccionado!.cantidadesPosibles,
-        _tipoProductoSeleccionado!.cantidadPrioritaria,
-      );
-
-      // Cerrar diálogo de progreso
-      Navigator.pop(context);
-
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Se agregaron ${_coloresSeleccionados.length} registros de stock correctamente',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      // Cerrar diálogo de progreso
-      Navigator.pop(context);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar el stock: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   // Método para agregar un nuevo color
   void _agregarColor(ColorProducto color) {
-    // CAMBIO 5: Validar que los campos obligatorios estén llenos
     if (_cantidadPrioritaria <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -292,7 +244,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
         ),
       );
 
-      // CAMBIO 6: Resetear campos después de agregar
+      // Resetear campos después de agregar
       _unidades = 1;
       _unidadesController.text = '1';
     });
@@ -371,7 +323,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
               // Mostrar cantidades posibles si hay un producto seleccionado y permite venta parcial
               if (_tipoProductoSeleccionado != null &&
                   _tipoProductoSeleccionado!.permiteVentaParcial) ...[
-                // CAMBIO 7: Campo de unidades encima de cantidades posibles
+                // Campo de unidades (rollos)
                 Row(
                   children: [
                     Expanded(
@@ -497,7 +449,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                         ),
                         keyboardType: TextInputType.number,
                         onChanged: (value) {
-                          final cantidad = int.tryParse(value) ?? 1;
+                          final cantidad = double.tryParse(value) ?? 1;
                           setState(() {
                             _cantidadPrioritaria = cantidad;
                           });
@@ -813,13 +765,13 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                 ],
               ],
 
-              // Botón de guardar
+              // Botón de guardar - ahora navega a la pantalla de detalle
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () => _guardarStock(_userId),
-                  child: const Text('Guardar Stock'),
+                  child: const Text('Ver Detalle de Stock'),
                 ),
               ),
             ],
@@ -846,7 +798,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 class _EntradaColorWidget extends StatefulWidget {
   final ColorConCantidad entrada;
   final String unidadMedida;
-  final List<int> cantidadesPosibles;
+  final List<double> cantidadesPosibles;
   final Function(ColorConCantidad) onChanged;
   final VoidCallback onRemove;
 
@@ -873,7 +825,7 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
   late TextEditingController _observacionesController;
   late TextEditingController _fechaVencimientoController;
   bool _expandido = false;
-  int _cantidadPrioritaria = 0;
+  double _cantidadPrioritaria = 0;
 
   @override
   void initState() {
@@ -938,7 +890,7 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
     }
 
     final nuevaEntrada = widget.entrada.copyWith(
-      cantidad: int.tryParse(_cantidadController.text) ?? 1,
+      cantidad: double.tryParse(_cantidadController.text) ?? 1,
       unidades: int.tryParse(_unidadesController.text) ?? 1,
       precioCompra: double.tryParse(_precioCompraController.text) ?? 0.0,
       precioVentaMenor:
@@ -991,7 +943,7 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
             ),
             title: Text(widget.entrada.color.nombreColor),
             subtitle: Text(
-              '${widget.entrada.cantidad} ${widget.unidadMedida} x ${widget.entrada.unidades} unidades',
+              '${widget.entrada.unidades} Unidade(s) contiene ${widget.entrada.cantidad} Metro(s)',
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1096,7 +1048,7 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
                             // Actualizar la cantidad prioritaria cuando cambie el valor
-                            final cantidad = int.tryParse(value) ?? 1;
+                            final cantidad = double.tryParse(value) ?? 1;
                             setState(() {
                               _cantidadPrioritaria = cantidad;
                             });

@@ -988,12 +988,12 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
               TextButton(
                 onPressed: () async {
                   if (formKey.currentState!.validate()) {
-                    final cantidad = int.parse(cantidadController.text);
+                    final cantidad = double.parse(cantidadController.text);
 
                     // Abrir las unidades
                     final resultado = await manager.abrirUnidad(
                       stockTienda.id,
-                      cantidad,
+                      cantidad, // cantidadUnidades
                       _userId!, // Esto debería ser el usuario actual
                       widget.tienda.id,
                     );
@@ -1058,7 +1058,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     precioController.text = precioInicial.toStringAsFixed(2);
 
     // Variable para el subtotal
-    double subtotal = precioInicial;
+    double subtotal = precioInicial * stock.cantidad;
 
     showDialog(
       context: context,
@@ -1094,7 +1094,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Agregar al carrito - ${stock.unidadMedida}',
+                        'Agregar al carrito -  ${stock.unidadMedida}',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

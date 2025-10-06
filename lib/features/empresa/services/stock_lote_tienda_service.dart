@@ -7,7 +7,6 @@ import 'package:inventario/features/empresa/services/base_service.dart';
 import '../models/stock_lote_tienda_model.dart';
 
 class StockLoteTiendaService extends BaseService {
-
   StockLoteTiendaService() : super('stock_lote_tienda');
 
   /// Crea un nuevo lote en Firebase
@@ -295,10 +294,10 @@ class StockLoteTiendaService extends BaseService {
   }
 
   /// Obtiene el total de stock disponible en lotes abiertos
-  Future<int> getTotalStockDisponible(String idStockTienda) async {
+  Future<double> getTotalStockDisponible(String idStockTienda) async {
     try {
       final lotes = await getLotesAbiertosDisponibles(idStockTienda);
-      int total = 0;
+      double total = 0;
 
       for (final lote in lotes) {
         total += lote.cantidadDisponible; // ✅ Esperamos correctamente
@@ -312,10 +311,10 @@ class StockLoteTiendaService extends BaseService {
   }
 
   /// Obtiene el total de stock vendido en lotes abiertos
-  Future<int> getTotalStockVendido(String idStockTienda) async {
+  Future<double> getTotalStockVendido(String idStockTienda) async {
     try {
       final lotes = await getLotesByStockTienda(idStockTienda);
-      int total = 0;
+      double total = 0;
 
       for (final lote in lotes) {
         if (!lote.estaCerrada) {

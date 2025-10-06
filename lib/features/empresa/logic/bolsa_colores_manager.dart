@@ -25,8 +25,8 @@ class BolsaColoresManager with ChangeNotifier {
     String? unidadMedidaSecundaria,
     required bool permiteVentaParcial,
     required bool requiereColor,
-    required List<int> cantidadesPosibles,
-    required int cantidadPrioritaria,
+    required List<double> cantidadesPosibles,
+    required double cantidadPrioritaria,
   }) async {
     _isLoading = true;
     _error = null;

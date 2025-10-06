@@ -5,7 +5,7 @@ class StockEmpresa {
   final String idEmpresa;
   final String idTipoProducto;
   final String? idColor; // ID del color (opcional)
-  final int cantidad; // Cantidad por unidad (ej: 20 metros por rollo)
+  final double cantidad; // Cantidad por unidad (ej: 20 metros por rollo)
   final int cantidadReservado; // Cantidad reservada en solicitudes pendientes
   final int cantidadAprobado; // Cantidad aprobada para envío
   final int unidades; // Número de unidades (ej: 50 rollos)
@@ -21,7 +21,7 @@ class StockEmpresa {
   final DateTime? deletedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // Campos adicionales copiados de TipoProducto
   final String categoria;
   final String nombre;
@@ -29,15 +29,15 @@ class StockEmpresa {
   final String? unidadMedidaSecundaria;
   final bool permiteVentaParcial;
   final bool requiereColor;
-  final List<int> cantidadesPosibles;
-  final int cantidadPrioritaria;
-  
+  final List<double> cantidadesPosibles;
+  final double cantidadPrioritaria;
+
   final String? createdBy;
   final String? updatedBy;
   final String? deletedBy;
-  int get cantidadDisponible => cantidad - cantidadReservado - cantidadAprobado;
-  int get total => cantidad * unidades;
-
+  int get cantidadDisponible => unidades - cantidadReservado - cantidadAprobado;
+  double get total => cantidad * unidades;
+  final String? codigoUnico;
   StockEmpresa({
     required this.id,
     required this.idEmpresa,
@@ -72,15 +72,16 @@ class StockEmpresa {
     this.createdBy,
     this.updatedBy,
     this.deletedBy,
+    this.codigoUnico,
   });
 
   // Factory constructor para crear desde JSON
   factory StockEmpresa.fromJson(Map<String, dynamic> json, [String? id]) {
     // Convertir la lista de cantidades desde JSON
-    List<int> cantidadesPosibles = [];
+    List<double> cantidadesPosibles = [];
     if (json['cantidadesPosibles'] != null) {
       for (var item in json['cantidadesPosibles']) {
-        cantidadesPosibles.add(int.parse(item.toString()));
+        cantidadesPosibles.add(double.parse(item.toString()));
       }
     }
 
@@ -128,6 +129,7 @@ class StockEmpresa {
       createdBy: json['createdBy'],
       updatedBy: json['updatedBy'],
       deletedBy: json['deletedBy'],
+      codigoUnico: json['codigoUnico'],
     );
   }
 
@@ -169,6 +171,7 @@ class StockEmpresa {
       'createdBy': createdBy,
       'updatedBy': updatedBy,
       'deletedBy': deletedBy,
+      'codigoUnico': codigoUnico,
     };
   }
 
@@ -178,7 +181,7 @@ class StockEmpresa {
     String? idEmpresa,
     String? idTipoProducto,
     String? idColor,
-    int? cantidad,
+    double? cantidad,
     int? cantidadReservado,
     int? cantidadAprobado,
     int? unidades,
@@ -200,11 +203,12 @@ class StockEmpresa {
     String? unidadMedidaSecundaria,
     bool? permiteVentaParcial,
     bool? requiereColor,
-    List<int>? cantidadesPosibles,
-    int? cantidadPrioritaria,
+    List<double>? cantidadesPosibles,
+    double? cantidadPrioritaria,
     String? createdBy,
     String? updatedBy,
     String? deletedBy,
+    String? codigoUnico,
   }) {
     return StockEmpresa(
       id: id ?? this.id,
@@ -230,7 +234,8 @@ class StockEmpresa {
       categoria: categoria ?? this.categoria,
       nombre: nombre ?? this.nombre,
       unidadMedida: unidadMedida ?? this.unidadMedida,
-      unidadMedidaSecundaria: unidadMedidaSecundaria ?? this.unidadMedidaSecundaria,
+      unidadMedidaSecundaria:
+          unidadMedidaSecundaria ?? this.unidadMedidaSecundaria,
       permiteVentaParcial: permiteVentaParcial ?? this.permiteVentaParcial,
       requiereColor: requiereColor ?? this.requiereColor,
       cantidadesPosibles: cantidadesPosibles ?? this.cantidadesPosibles,
@@ -238,6 +243,7 @@ class StockEmpresa {
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
       deletedBy: deletedBy ?? this.deletedBy,
+      codigoUnico: codigoUnico ?? this.codigoUnico,
     );
   }
 
@@ -271,6 +277,7 @@ class StockEmpresa {
       createdBy: null,
       updatedBy: null,
       deletedBy: null,
+      codigoUnico: null,
     );
   }
 
@@ -307,7 +314,8 @@ class StockEmpresa {
         'cantidadPrioritaria: $cantidadPrioritaria, '
         'createdBy: $createdBy, '
         'updatedBy: $updatedBy, '
-        'deletedBy: $deletedBy'
+        'deletedBy: $deletedBy, '
+        'codigoUnico: $codigoUnico'
         '}';
   }
 }
