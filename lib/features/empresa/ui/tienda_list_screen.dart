@@ -1,8 +1,6 @@
 // lib/features/empresa/ui/tienda_list_screen.dart
 import 'package:flutter/material.dart';
-import 'package:inventario/features/empresa/logic/carrito_manager.dart';
-import 'package:inventario/features/empresa/logic/venta_manager.dart';
-import 'package:inventario/features/empresa/ui/carrito_screen.dart';
+import 'package:inventario/features/empresa/ui/reporte_screen.dart';
 import 'package:inventario/features/empresa/ui/tienda_solicitudes_screen.dart';
 import 'package:inventario/features/empresa/ui/venta_screen.dart'; // Importar la nueva pantalla
 import 'package:provider/provider.dart';
@@ -203,11 +201,11 @@ class _TiendaListScreenState extends State<TiendaListScreen> {
   }
 
   void _verReportes(BuildContext context, Tienda tienda) {
-    // Mostrar mensaje temporal hasta que se implemente la pantalla
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reportes para ${tienda.nombre} en desarrollo'),
-        duration: const Duration(seconds: 2),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            ReporteScreen(empresaId: widget.empresaId, tienda: tienda),
       ),
     );
   }
