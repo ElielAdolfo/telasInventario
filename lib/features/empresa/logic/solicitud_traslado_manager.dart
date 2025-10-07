@@ -152,8 +152,6 @@ class SolicitudTrasladoManager with ChangeNotifier {
         unidadMedidaSecundaria: stock.unidadMedidaSecundaria,
         permiteVentaParcial: stock.permiteVentaParcial,
         requiereColor: stock.requiereColor,
-        cantidadesPosibles: stock.cantidadesPosibles,
-        cantidadPrioritaria: stock.cantidadPrioritaria,
         precioCompra: stock.precioCompra,
         precioVentaMenor: stock.precioVentaMenor,
         precioVentaMayor: stock.precioVentaMayor,
@@ -271,7 +269,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
 
     try {
       final solicitud = await _service.getSolicitudById(idSolicitud);
-      print("solicitud: " +solicitud.toString());
+      print("solicitud: " + solicitud.toString());
       if (solicitud == null) {
         _error = 'No se encontró la solicitud';
         _isLoading = false;
@@ -364,6 +362,7 @@ class SolicitudTrasladoManager with ChangeNotifier {
         colorCodigo: solicitud.colorCodigo,
         idsLotes: [],
         cantidadAperturada: 0,
+        codigoUnico: solicitud.codigoUnico,
       );
 
       final idStockTienda = await _stockTiendaService.createStockTienda(

@@ -48,6 +48,12 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
   final _observacionesController = TextEditingController();
   late final String? _userId;
 
+  // Controlador para el buscador de código
+  final _codigoBusquedaController = TextEditingController();
+
+  // Variable para almacenar el ID del stock encontrado por búsqueda
+  String? _stockEncontradoId;
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +90,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
       controller.dispose();
     }
     _observacionesController.dispose();
+    _codigoBusquedaController.dispose();
     super.dispose();
   }
 
@@ -96,6 +103,11 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Buscador por código
+            _buildBuscadorPorCodigo(),
+
+            const SizedBox(height: 16),
+
             // Selector de producto
             _buildProductoSelector(),
 
@@ -135,6 +147,96 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
     );
   }
 
+  // Widget para el buscador por código
+  Widget _buildBuscadorPorCodigo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Buscar por código:',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _codigoBusquedaController,
+                decoration: const InputDecoration(
+                  labelText: 'Código de producto',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _buscarPorCodigo,
+              child: const Text('Buscar'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Método para buscar por código
+  void _buscarPorCodigo() {
+    final codigo = _codigoBusquedaController.text.trim();
+    if (codigo.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ingrese un código')));
+      return;
+    }
+
+    final stockManager = Provider.of<StockEmpresaManager>(
+      context,
+      listen: false,
+    );
+    final stock = stockManager.buscarStockPorCodigo(codigo);
+
+    if (stock == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se encontró stock con ese código')),
+      );
+      return;
+    }
+
+    // Obtener el tipo de producto
+    final tipoProductoManager = Provider.of<TipoProductoManager>(
+      context,
+      listen: false,
+    );
+    final tipoProducto = tipoProductoManager.tiposProducto.firstWhere(
+      (tp) => tp.id == stock.idTipoProducto,
+      orElse: () => throw Exception('Tipo de producto no encontrado'),
+    );
+
+    // Obtener el color si es necesario
+    ColorProducto? color;
+    if (stock.idColor != null) {
+      final colorManager = Provider.of<ColorManager>(context, listen: false);
+      color = colorManager.colores.firstWhere(
+        (c) => c.id == stock.idColor,
+        orElse: () => throw Exception('Color no encontrado'),
+      );
+    }
+
+    // Establecer los valores
+    setState(() {
+      _productoSeleccionado = tipoProducto;
+      _colorSeleccionado = color;
+      _stockEncontradoId = stock.id; // Guardar el ID del stock encontrado
+      // Limpiar la lista de productos a asignar y controladores
+      _productosAsignar = [];
+      _cantidadControllers = {};
+    });
+
+    // Limpiar el campo de búsqueda
+    _codigoBusquedaController.clear();
+  }
+
   // Widget para seleccionar producto
   Widget _buildProductoSelector() {
     return Consumer<TipoProductoManager>(
@@ -169,6 +271,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
               _productoSeleccionado = value;
               _colorSeleccionado =
                   null; // Resetear color al cambiar de producto
+              _stockEncontradoId = null; // Resetear el stock encontrado
               _productosAsignar = []; // Limpiar lista al cambiar de producto
               _cantidadControllers = {}; // Limpiar controladores
             });
@@ -215,6 +318,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
                   onTap: () {
                     setState(() {
                       _colorSeleccionado = color;
+                      _stockEncontradoId = null; // Resetear el stock encontrado
                       _productosAsignar =
                           []; // Limpiar lista al cambiar de color
                       _cantidadControllers = {}; // Limpiar controladores
@@ -286,41 +390,80 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
             Table(
               border: TableBorder.all(color: Colors.grey),
               columnWidths: const {
-                0: FlexColumnWidth(1),
+                0: FlexColumnWidth(0.5),
                 1: FlexColumnWidth(1),
                 2: FlexColumnWidth(1),
+                3: FlexColumnWidth(1),
               },
               children: [
                 // Encabezado de la tabla
                 TableRow(
                   decoration: BoxDecoration(color: Colors.grey[200]),
                   children: [
-                    _buildTableCell('Rollos', isHeader: true),
+                    _buildTableCell('#', isHeader: true),
+                    _buildTableCell('Código', isHeader: true),
                     _buildTableCell('Metros', isHeader: true),
                     _buildTableCell('Añadir', isHeader: true),
                   ],
                 ),
                 // Filas de productos
-                ...productosFiltrados.map((stock) {
-                  // Crear controlador si no existe
-                  if (!_cantidadControllers.containsKey(stock.id)) {
-                    _cantidadControllers[stock.id] = TextEditingController();
-                  }
+                ...productosFiltrados
+                    .asMap()
+                    .map((index, stock) {
+                      // Verificar si esta fila debe ser resaltada
+                      final bool esStockEncontrado =
+                          stock.id == _stockEncontradoId;
 
-                  return TableRow(
-                    children: [
-                      _buildTableCell('${stock.cantidadDisponible}'),
-                      _buildTableCell('${stock.cantidad}'),
-                      _buildTableCell(
-                        '',
-                        isButton: true,
-                        onPressed: stock.unidades > 0
-                            ? () => _agregarProductoALista(stock)
-                            : null, // Deshabilitar si no hay stock disponible
-                      ),
-                    ],
-                  );
-                }),
+                      // Determinar el estado y color de fondo
+                      String estadoTexto = '';
+                      Color? colorFondo;
+                      Color? colorTexto;
+
+                      if (stock.cantidadReservado > 0) {
+                        estadoTexto = 'RESERVADO';
+                        colorFondo = Colors.green.withOpacity(
+                          0.3,
+                        ); // Verde claro para reservado
+                        colorTexto = Colors.green[800]; // Texto en verde oscuro
+                      } else if (stock.cantidadAprobado > 0) {
+                        estadoTexto = 'APROBADO';
+                        colorFondo = Colors.red.withOpacity(
+                          0.3,
+                        ); // Rojo bajo para aprobado
+                        colorTexto = Colors.red[800]; // Texto en rojo oscuro
+                      } else {
+                        // Sin estado (disponible)
+                        colorFondo = null; // Blanco
+                        colorTexto = null; // Color por defecto
+                      }
+
+                      return MapEntry(
+                        index,
+                        TableRow(
+                          decoration: colorFondo != null
+                              ? BoxDecoration(color: colorFondo)
+                              : null,
+                          children: [
+                            _buildTableCell('${index + 1}'), // Número de fila
+                            _buildTableCell('${stock.codigoUnico}'),
+                            // Mostrar metraje con estado entre paréntesis
+                            _buildTableCell(
+                              '${stock.cantidad} ${estadoTexto.isNotEmpty ? '($estadoTexto)' : ''}',
+                              textColor: colorTexto,
+                            ),
+                            _buildTableCell(
+                              '',
+                              isButton: true,
+                              onPressed: stock.cantidadDisponible > 0
+                                  ? () => _agregarProductoALista(stock)
+                                  : null, // Deshabilitar si no hay stock disponible
+                            ),
+                          ],
+                        ),
+                      );
+                    })
+                    .values
+                    .toList(),
               ],
             ),
           ],
@@ -342,41 +485,60 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
         Table(
           border: TableBorder.all(color: Colors.grey),
           columnWidths: const {
-            0: FlexColumnWidth(2),
-            1: FlexColumnWidth(1),
+            0: FlexColumnWidth(1),
+            1: FlexColumnWidth(2),
             2: FlexColumnWidth(1),
+            3: FlexColumnWidth(1),
           },
           children: [
             // Encabezado de la tabla
             TableRow(
               decoration: BoxDecoration(color: Colors.grey[200]),
               children: [
+                _buildTableCell('Código', isHeader: true),
                 _buildTableCell('Producto', isHeader: true),
-                _buildTableCell('Cantidad', isHeader: true),
+                _buildTableCell('Metros', isHeader: true),
                 _buildTableCell('Acciones', isHeader: true),
               ],
             ),
             // Filas de productos a asignar
             ..._productosAsignar.map((item) {
+              final stock = item['stock'] as StockEmpresa;
+
+              // Determinar el estado y color de fondo
+              String estadoTexto = '';
+              Color? colorFondo;
+              Color? colorTexto;
+
+              if (stock.cantidadReservado > 0) {
+                estadoTexto = 'RESERVADO';
+                colorFondo = Colors.green.withOpacity(
+                  0.3,
+                ); // Verde claro para reservado
+                colorTexto = Colors.green[800]; // Texto en verde oscuro
+              } else if (stock.cantidadAprobado > 0) {
+                estadoTexto = 'APROBADO';
+                colorFondo = Colors.red.withOpacity(
+                  0.3,
+                ); // Rojo bajo para aprobado
+                colorTexto = Colors.red[800]; // Texto en rojo oscuro
+              } else {
+                // Sin estado (disponible)
+                colorFondo = null; // Blanco
+                colorTexto = null; // Color por defecto
+              }
+
               return TableRow(
+                decoration: colorFondo != null
+                    ? BoxDecoration(color: colorFondo)
+                    : null,
                 children: [
+                  _buildTableCell('${stock.codigoUnico}'),
                   _buildTableCell('${item['producto']}'),
+                  // Mostrar metraje con estado entre paréntesis
                   _buildTableCell(
-                    '',
-                    controller: _cantidadControllers[item['id']]!,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingrese cantidad';
-                      }
-                      final cantidad = int.tryParse(value);
-                      if (cantidad == null || cantidad <= 0) {
-                        return 'Cantidad inválida';
-                      }
-                      if (cantidad > item['cantidad']) {
-                        return 'No puede superar el stock disponible';
-                      }
-                      return null;
-                    },
+                    '${stock.cantidad} ${estadoTexto.isNotEmpty ? '($estadoTexto)' : ''}',
+                    textColor: colorTexto,
                   ),
                   _buildTableCell(
                     'Eliminar',
@@ -390,6 +552,58 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  // Método para construir celdas de tabla
+  Widget _buildTableCell(
+    String text, {
+    bool isHeader = false,
+    bool isButton = false,
+    VoidCallback? onPressed,
+    Color? color,
+    Color? textColor, // Nuevo parámetro para color de texto
+    TextEditingController? controller,
+    String? Function(String?)? validator,
+  }) {
+    if (isButton) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: color ?? Colors.blue,
+            minimumSize: const Size(80, 36),
+          ),
+          child: Text(text),
+        ),
+      );
+    }
+
+    if (controller != null) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: TextFormField(
+          controller: controller,
+          validator: validator,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
+          color: textColor, // Aplicar color de texto si se proporciona
+        ),
+      ),
     );
   }
 
@@ -482,15 +696,10 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
       _productosAsignar.add({
         'id': stock.id,
         'producto':
-            '${_productoSeleccionado!.nombre} - ${_colorSeleccionado!.nombreColor}',
-        'cantidad': stock.cantidadDisponible,
-        'stock': stock,
+            '${_productoSeleccionado!.nombre} - ${_colorSeleccionado?.nombreColor ?? ''}',
+        'stock':
+            stock, // Guardamos el stock completo para acceder a sus propiedades
       });
-
-      // Inicializar el controlador con el valor máximo
-      _cantidadControllers[stock.id] = TextEditingController(
-        text: stock.cantidadDisponible.toString(),
-      );
     });
   }
 
@@ -524,34 +733,6 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
       return;
     }
 
-    // Validar todas las cantidades
-    bool cantidadesValidas = true;
-    String mensajeError = '';
-
-    for (var item in _productosAsignar) {
-      final controller = _cantidadControllers[item['id']];
-      final cantidad = int.tryParse(controller?.text ?? '0');
-
-      if (cantidad == null || cantidad <= 0) {
-        cantidadesValidas = false;
-        mensajeError = 'Ingrese cantidades válidas para todos los productos';
-        break;
-      }
-
-      if (cantidad > item['cantidad']) {
-        cantidadesValidas = false;
-        mensajeError = 'La cantidad no puede superar el stock disponible';
-        break;
-      }
-    }
-
-    if (!cantidadesValidas) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -565,8 +746,6 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
 
       // Crear una solicitud por cada producto
       for (var item in _productosAsignar) {
-        final controller = _cantidadControllers[item['id']];
-        final cantidad = int.parse(controller?.text ?? '0');
         final stock = item['stock'] as StockEmpresa;
 
         // MODIFICADO: Crear la solicitud con estado RESERVADO en lugar de APROBADO
@@ -577,8 +756,9 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           idTienda: _tiendaSeleccionada!.id,
           idStockOrigen: stock.id,
           tipoSolicitud: 'EMPRESA_A_TIENDA',
-          cantidadSolicitada: cantidad,
-          cantidad: stock.cantidad,
+          cantidadSolicitada:
+              1, // Siempre será 1 porque cada código es una unidad
+          cantidad: stock.cantidad, // Metraje del producto
           estado: 'RESERVADO', // Estado inicial según el nuevo flujo
           fechaSolicitud: DateTime.now(),
           motivo: _observacionesController.text.isNotEmpty
@@ -595,8 +775,6 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           unidadMedidaSecundaria: stock.unidadMedidaSecundaria,
           permiteVentaParcial: stock.permiteVentaParcial,
           requiereColor: stock.requiereColor,
-          cantidadesPosibles: stock.cantidadesPosibles,
-          cantidadPrioritaria: stock.cantidadPrioritaria,
           precioCompra: stock.precioCompra,
           precioVentaMenor: stock.precioVentaMenor,
           precioVentaMayor: stock.precioVentaMayor,
@@ -605,7 +783,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           fechaVencimiento: stock.fechaVencimiento,
           colorNombre: _colorSeleccionado?.nombreColor,
           colorCodigo: _colorSeleccionado?.codigoColor,
-
+          codigoUnico: stock.codigoUnico, // Agregar el código único
           // Campos de auditoría
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
@@ -722,56 +900,6 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
         );
       }
     }
-  }
-
-  // Método para construir celdas de tabla
-  Widget _buildTableCell(
-    String text, {
-    bool isHeader = false,
-    bool isButton = false,
-    VoidCallback? onPressed,
-    Color? color,
-    TextEditingController? controller,
-    String? Function(String?)? validator,
-  }) {
-    if (isButton) {
-      return Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: color ?? Colors.blue,
-            minimumSize: const Size(80, 36),
-          ),
-          child: Text(text),
-        ),
-      );
-    }
-
-    if (controller != null) {
-      return Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: TextFormField(
-          controller: controller,
-          validator: validator,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 8),
-          ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-    );
   }
 
   // Método para parsear color

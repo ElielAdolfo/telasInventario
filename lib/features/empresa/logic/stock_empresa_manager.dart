@@ -34,7 +34,7 @@ class StockEmpresaManager with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _service.createStockEmpresa(stock,userId);
+      await _service.createStockEmpresa(stock, userId);
       await loadStockByEmpresa(stock.idEmpresa);
     } catch (e) {
       _error = e.toString();
@@ -245,5 +245,13 @@ class StockEmpresaManager with ChangeNotifier {
 
   Stream<List<StockEmpresa>> stockByEmpresaStream(String idEmpresa) {
     return _service.stockByEmpresaStream(idEmpresa);
+  }
+
+  StockEmpresa? buscarStockPorCodigo(String codigo) {
+    try {
+      return _stockEmpresa.firstWhere((stock) => stock.codigoUnico == codigo);
+    } catch (e) {
+      return null;
+    }
   }
 }

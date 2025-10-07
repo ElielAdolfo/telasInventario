@@ -23,6 +23,7 @@ class SolicitudTraslado {
   final DateTime? fechaDevolucion;
   final DateTime? fechaRechazo;
   final String? correlativo;
+  final String? codigoUnico; // Nuevo campo agregado
 
   // Campos copiados de StockEmpresa para mantener un registro histórico
   final String categoria;
@@ -31,8 +32,6 @@ class SolicitudTraslado {
   final String? unidadMedidaSecundaria;
   final bool permiteVentaParcial;
   final bool requiereColor;
-  final List<double> cantidadesPosibles;
-  final double cantidadPrioritaria;
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
@@ -65,6 +64,7 @@ class SolicitudTraslado {
     required this.estado,
     required this.fechaSolicitud,
     this.correlativo,
+    this.codigoUnico, // Nuevo campo agregado
     this.idStockDestino,
     this.motivo,
     this.motivoRechazo,
@@ -85,8 +85,6 @@ class SolicitudTraslado {
     required this.unidadMedidaSecundaria,
     required this.permiteVentaParcial,
     required this.requiereColor,
-    required this.cantidadesPosibles,
-    required this.cantidadPrioritaria,
     required this.precioCompra,
     required this.precioVentaMenor,
     required this.precioVentaMayor,
@@ -108,13 +106,6 @@ class SolicitudTraslado {
   });
 
   factory SolicitudTraslado.fromJson(Map<String, dynamic> json, String id) {
-    List<double> cantidadesPosibles = [];
-    if (json['cantidadesPosibles'] != null) {
-      cantidadesPosibles = List<double>.from(
-        json['cantidadesPosibles'].map((x) => int.parse(x.toString())),
-      );
-    }
-
     return SolicitudTraslado(
       id: id,
       idEmpresa: json['idEmpresa'] ?? '',
@@ -126,6 +117,7 @@ class SolicitudTraslado {
       estado: json['estado'] ?? '',
       fechaSolicitud: DateTime.parse(json['fechaSolicitud']),
       correlativo: json['correlativo'],
+      codigoUnico: json['codigoUnico'], // Nuevo campo agregado
       idStockDestino: json['idStockDestino'],
       motivo: json['motivo'],
       motivoRechazo: json['motivoRechazo'],
@@ -154,8 +146,6 @@ class SolicitudTraslado {
       unidadMedidaSecundaria: json['unidadMedidaSecundaria'],
       permiteVentaParcial: json['permiteVentaParcial'] ?? false,
       requiereColor: json['requiereColor'] ?? false,
-      cantidadesPosibles: cantidadesPosibles,
-      cantidadPrioritaria: json['cantidadPrioritaria'] ?? 0,
       precioCompra: (json['precioCompra'] ?? 0).toDouble(),
       precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
       precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
@@ -196,6 +186,7 @@ class SolicitudTraslado {
       'estado': estado,
       'fechaSolicitud': fechaSolicitud.toIso8601String(),
       'correlativo': correlativo,
+      'codigoUnico': codigoUnico, // Nuevo campo agregado
       'idStockDestino': idStockDestino,
       'motivo': motivo,
       'motivoRechazo': motivoRechazo,
@@ -216,8 +207,6 @@ class SolicitudTraslado {
       'unidadMedidaSecundaria': unidadMedidaSecundaria,
       'permiteVentaParcial': permiteVentaParcial,
       'requiereColor': requiereColor,
-      'cantidadesPosibles': cantidadesPosibles,
-      'cantidadPrioritaria': cantidadPrioritaria,
       'precioCompra': precioCompra,
       'precioVentaMenor': precioVentaMenor,
       'precioVentaMayor': precioVentaMayor,
@@ -255,6 +244,7 @@ class SolicitudTraslado {
     DateTime? fechaDevolucion,
     DateTime? fechaRechazo,
     String? correlativo,
+    String? codigoUnico, // Nuevo campo agregado
     // Campos copiados de StockEmpresa
     String? categoria,
     String? nombre,
@@ -262,8 +252,6 @@ class SolicitudTraslado {
     String? unidadMedidaSecundaria,
     bool? permiteVentaParcial,
     bool? requiereColor,
-    List<double>? cantidadesPosibles,
-    double? cantidadPrioritaria,
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
@@ -295,6 +283,7 @@ class SolicitudTraslado {
       estado: estado ?? this.estado,
       fechaSolicitud: fechaSolicitud ?? this.fechaSolicitud,
       correlativo: correlativo ?? this.correlativo,
+      codigoUnico: codigoUnico ?? this.codigoUnico, // Nuevo campo agregado
       idStockDestino: idStockDestino ?? this.idStockDestino,
       motivo: motivo ?? this.motivo,
       motivoRechazo: motivoRechazo ?? this.motivoRechazo,
@@ -317,8 +306,6 @@ class SolicitudTraslado {
           unidadMedidaSecundaria ?? this.unidadMedidaSecundaria,
       permiteVentaParcial: permiteVentaParcial ?? this.permiteVentaParcial,
       requiereColor: requiereColor ?? this.requiereColor,
-      cantidadesPosibles: cantidadesPosibles ?? this.cantidadesPosibles,
-      cantidadPrioritaria: cantidadPrioritaria ?? this.cantidadPrioritaria,
       precioCompra: precioCompra ?? this.precioCompra,
       precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
       precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
@@ -337,6 +324,60 @@ class SolicitudTraslado {
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
       deletedBy: deletedBy ?? this.deletedBy,
+    );
+  }
+
+  factory SolicitudTraslado.empty() {
+    return SolicitudTraslado(
+      id: '',
+      idEmpresa: '',
+      idTienda: '',
+      idStockOrigen: '',
+      tipoSolicitud: '',
+      cantidadSolicitada: 0,
+      cantidad: 0.0,
+      estado: '',
+      fechaSolicitud: DateTime.now(),
+      correlativo: '',
+      codigoUnico: '',
+      idStockDestino: null,
+      motivo: null,
+      motivoRechazo: null,
+      observacionesRecepcion: null,
+      motivoDevolucion: null,
+      solicitadoPor: null,
+      aprobadoPor: null,
+      recibidoPor: null,
+      devueltoPor: null,
+      fechaAprobacion: null,
+      fechaRecepcion: null,
+      fechaDevolucion: null,
+      fechaRechazo: null,
+      // Campos copiados de StockEmpresa
+      categoria: '',
+      nombre: '',
+      unidadMedida: '',
+      unidadMedidaSecundaria: null,
+      permiteVentaParcial: false,
+      requiereColor: false,
+      precioCompra: 0.0,
+      precioVentaMenor: 0.0,
+      precioVentaMayor: 0.0,
+      precioPaquete: null,
+      lote: null,
+      fechaVencimiento: null,
+      colorNombre: null,
+      colorCodigo: null,
+      // IDs para referencia
+      idTipoProducto: null,
+      idColor: null,
+      // Campos de auditoría
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      deletedAt: null,
+      createdBy: null,
+      updatedBy: null,
+      deletedBy: null,
     );
   }
 }

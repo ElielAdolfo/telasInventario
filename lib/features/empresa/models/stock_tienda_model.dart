@@ -23,6 +23,9 @@ class StockTienda {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  // Nuevo campo
+  final String? codigoUnico;
+
   // Campos adicionales copiados de SolicitudTraslado
   final String categoria;
   final String nombre;
@@ -69,10 +72,10 @@ class StockTienda {
     required this.colorNombre,
     required this.colorCodigo,
     required this.idsLotes,
+    this.codigoUnico, // Nuevo campo agregado
   });
 
   factory StockTienda.fromJson(Map<String, dynamic> json, String id) {
-
     List<String> idsLotes = [];
     if (json['idsLotes'] != null) {
       idsLotes = List<String>.from(json['idsLotes']);
@@ -110,6 +113,7 @@ class StockTienda {
       colorNombre: json['colorNombre'],
       colorCodigo: json['colorCodigo'],
       idsLotes: idsLotes,
+      codigoUnico: json['codigoUnico'], // Nuevo campo agregado
     );
   }
 
@@ -143,6 +147,7 @@ class StockTienda {
       'colorNombre': colorNombre,
       'colorCodigo': colorCodigo,
       'idsLotes': idsLotes,
+      'codigoUnico': codigoUnico, // Nuevo campo agregado
     };
   }
 
@@ -176,6 +181,7 @@ class StockTienda {
     String? colorNombre,
     String? colorCodigo,
     List<String>? idsLotes,
+    String? codigoUnico, // Nuevo campo
   }) {
     return StockTienda(
       id: id ?? this.id,
@@ -208,6 +214,7 @@ class StockTienda {
       colorNombre: colorNombre ?? this.colorNombre,
       colorCodigo: colorCodigo ?? this.colorCodigo,
       idsLotes: idsLotes ?? this.idsLotes,
+      codigoUnico: codigoUnico ?? this.codigoUnico, // Nuevo campo agregado
     );
   }
 
@@ -241,7 +248,8 @@ class StockTienda {
       fechaVencimiento: null,
       colorNombre: '',
       colorCodigo: '',
-      idsLotes: [],
+      idsLotes: const [],
+      codigoUnico: '', // Nuevo campo agregado
     );
   }
 
@@ -273,6 +281,7 @@ class StockTienda {
         'fechaVencimiento: $fechaVencimiento, '
         'colorNombre: $colorNombre, '
         'colorCodigo: $colorCodigo, '
+        'codigoUnico: $codigoUnico, ' // Nuevo campo
         'deleted: $deleted, '
         'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '
