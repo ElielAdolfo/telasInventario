@@ -89,7 +89,7 @@ class StockLoteTiendaManager extends ChangeNotifier {
       final lote = _lotes[loteIndex];
 
       if (lote.cantidadDisponible < cantidad) {
-        _error = 'Stock insuficiente. Disponible: ${lote.cantidadDisponible}';
+        _error = 'Stock insuficiente... Disponible: ${lote.cantidadDisponible}';
         _isLoading = false;
         notifyListeners();
         return false;

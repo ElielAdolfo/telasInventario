@@ -8,7 +8,7 @@ class CarritoManager extends ChangeNotifier {
 
   List<CarritoItem> get items => _items;
 
-  int get totalItems => _items.fold(0, (sum, item) => sum + item.cantidad);
+  double get totalItems => _items.fold(0, (sum, item) => sum + item.cantidad);
 
   double get total =>
       _items.fold(0, (sum, item) => sum + (item.precio * item.cantidad));
@@ -34,7 +34,7 @@ class CarritoManager extends ChangeNotifier {
   }
 
   // Método para actualizar la cantidad de un item
-  void actualizarCantidad(String id, int nuevaCantidad) {
+  void actualizarCantidad(String id, double nuevaCantidad) {
     final index = _items.indexWhere((item) => item.id == id);
     if (index != -1) {
       _items[index] = _items[index].copyWith(cantidad: nuevaCantidad);

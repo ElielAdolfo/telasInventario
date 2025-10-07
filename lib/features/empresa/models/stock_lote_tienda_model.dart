@@ -13,6 +13,11 @@ class StockLoteTienda {
   final bool deleted;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? codigoUnico; // ✅ Nuevo campo
+  final String idTipoProducto; // ✅ Nuevo campo
+  final String idEmpresa; // ✅ Nuevo campo
+  final String idTienda; // ✅ Nuevo campo
+  final String? idColor; // ✅ Nuevo campo opcional
 
   StockLoteTienda({
     required this.id,
@@ -27,6 +32,11 @@ class StockLoteTienda {
     this.deleted = false,
     required this.createdAt,
     required this.updatedAt,
+    this.codigoUnico,
+    required this.idTipoProducto,
+    required this.idEmpresa,
+    required this.idTienda,
+    this.idColor, // ✅ agregado al constructor
   });
 
   double get cantidadDisponible => cantidad - cantidadVendida;
@@ -35,8 +45,8 @@ class StockLoteTienda {
     return StockLoteTienda(
       id: id,
       idStockTienda: json['idStockTienda'] ?? '',
-      cantidad: json['cantidad'] ?? 0,
-      cantidadVendida: json['cantidadVendida'] ?? 0,
+      cantidad: (json['cantidad'] ?? 0).toDouble(),
+      cantidadVendida: (json['cantidadVendida'] ?? 0).toDouble(),
       fechaApertura: DateTime.parse(json['fechaApertura']),
       abiertoPor: json['abiertoPor'] ?? '',
       estaCerrada: json['estaCerrada'] ?? false,
@@ -47,6 +57,11 @@ class StockLoteTienda {
       deleted: json['deleted'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+      codigoUnico: json['codigoUnico'],
+      idTipoProducto: json['idTipoProducto'] ?? '',
+      idEmpresa: json['idEmpresa'] ?? '',
+      idTienda: json['idTienda'] ?? '',
+      idColor: json['idColor'], // ✅ agregado
     );
   }
 
@@ -63,6 +78,11 @@ class StockLoteTienda {
       'deleted': deleted,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'codigoUnico': codigoUnico,
+      'idTipoProducto': idTipoProducto,
+      'idEmpresa': idEmpresa,
+      'idTienda': idTienda,
+      'idColor': idColor, // ✅ agregado
     };
   }
 
@@ -79,6 +99,11 @@ class StockLoteTienda {
     bool? deleted,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? codigoUnico,
+    String? idTipoProducto,
+    String? idEmpresa,
+    String? idTienda,
+    String? idColor, // ✅ agregado
   }) {
     return StockLoteTienda(
       id: id ?? this.id,
@@ -93,6 +118,11 @@ class StockLoteTienda {
       deleted: deleted ?? this.deleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      codigoUnico: codigoUnico ?? this.codigoUnico,
+      idTipoProducto: idTipoProducto ?? this.idTipoProducto,
+      idEmpresa: idEmpresa ?? this.idEmpresa,
+      idTienda: idTienda ?? this.idTienda,
+      idColor: idColor ?? this.idColor, // ✅ agregado
     );
   }
 
@@ -101,6 +131,10 @@ class StockLoteTienda {
     return 'StockLoteTienda('
         'id: $id, '
         'idStockTienda: $idStockTienda, '
+        'idTipoProducto: $idTipoProducto, '
+        'idEmpresa: $idEmpresa, '
+        'idTienda: $idTienda, '
+        'idColor: $idColor, '
         'cantidad: $cantidad, '
         'cantidadVendida: $cantidadVendida, '
         'cantidadDisponible: $cantidadDisponible, '
@@ -111,7 +145,8 @@ class StockLoteTienda {
         'cerradoPor: $cerradoPor, '
         'deleted: $deleted, '
         'createdAt: $createdAt, '
-        'updatedAt: $updatedAt'
+        'updatedAt: $updatedAt, '
+        'codigoUnico: $codigoUnico'
         ')';
   }
 }

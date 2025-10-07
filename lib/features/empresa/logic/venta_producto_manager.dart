@@ -118,42 +118,64 @@ class VentaProductoManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Método para obtener lotes de un producto específico por nombre y color
   Future<List<StockLoteTienda>> getLotesPorProductoColor(
     String nombreProducto,
     String colorNombre,
-    tiendaId,
+    String tiendaId,
   ) async {
     try {
-      _productosConStock = await _stockTiendaService.getStockByTienda(tiendaId);
-      _productosConStock = _productosConStock
-          .where((stock) => stock.cantidadDisponible > 0)
-          .toList();
+      print(
+        "Buscando lotes para producto: $nombreProducto, color: $colorNombre, tienda: $tiendaId",
+      );
+
+      // Obtener stocks de tienda para la tienda específica
+      final stocksTienda = await _stockTiendaService.getStockByTienda(tiendaId);
+      print("Stocks de tienda obtenidos: ${stocksTienda.length}");
 
       // Filtrar los stocks de tienda que coincidan con el nombre y color
-      final stocksTienda = _productosConStock
+      final stocksFiltrados = stocksTienda
           .where(
             (s) => s.nombre == nombreProducto && s.colorNombre == colorNombre,
           )
           .toList();
 
-      // Obtener los IDs de los stocks de tienda
-      final idsStockTienda = stocksTienda.map((s) => s.id).toList();
+      print("Stocks filtrados: ${stocksFiltrados.length}");
+
+      if (stocksFiltrados.isEmpty) {
+        print(
+          "No se encontraron stocks de tienda para el producto y color especificados",
+        );
+        return [];
+      }
+
+      // Obtener los IDs de los stocks de tienda filtrados
+      final idsStockTienda = stocksFiltrados.map((s) => s.id).toList();
+      print("IDs de stocks de tienda: $idsStockTienda");
 
       // Obtener todos los lotes disponibles
       final List<StockLoteTienda> todosLotes = [];
 
       for (String idStockTienda in idsStockTienda) {
+        print("Buscando lotes para stock de tienda: $idStockTienda");
         final lotes = await _stockLoteTiendaService.getLotesByStockTienda(
           idStockTienda,
         );
+        print("Lotes encontrados para $idStockTienda: ${lotes.length}");
         todosLotes.addAll(lotes);
       }
+
+      print("Total de lotes: ${todosLotes.length}");
+
       // Filtrar los lotes que estén abiertos y tengan stock disponible
-      return todosLotes
+      final lotesFiltrados = todosLotes
           .where((lote) => !lote.estaCerrada && lote.cantidadDisponible > 0)
           .toList();
+
+      print("Lotes filtrados (abiertos y con stock): ${lotesFiltrados.length}");
+
+      return lotesFiltrados;
     } catch (e) {
+      print("Error en getLotesPorProductoColor: $e");
       _error = e.toString();
       notifyListeners();
       return [];
@@ -424,6 +446,11 @@ class VentaProductoManager extends ChangeNotifier {
     double cantidad,
     String abiertoPor,
     String idTienda,
+    String? codigoUnico,
+    String idTipoProducto, // ✅ Nuevo campo
+    String idEmpresa, // ✅ Nuevo campo
+    String? idColor,
+    double metraje,
   ) async {
     try {
       // Obtener el stock de tienda actualizado
@@ -438,7 +465,7 @@ class VentaProductoManager extends ChangeNotifier {
       // Verificar si hay stock disponible para abrir
       if (stockTienda.cantidadDisponible < cantidad) {
         _error =
-            'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
+            'Stock insuficiente.... Disponible: ${stockTienda.cantidadDisponible}';
         notifyListeners();
         return false;
       }
@@ -448,14 +475,19 @@ class VentaProductoManager extends ChangeNotifier {
         final nuevoLote = StockLoteTienda(
           id: '', // El ID será generado por Firebase
           idStockTienda: idStockTienda,
-          cantidad: cantidad,
+          cantidad: metraje,
           cantidadVendida: 0,
           fechaApertura: DateTime.now(),
           abiertoPor: abiertoPor,
           estaCerrada: false,
           deleted: false,
           createdAt: DateTime.now(),
+          codigoUnico: codigoUnico,
           updatedAt: DateTime.now(),
+          idTipoProducto: idTipoProducto,
+          idEmpresa: idEmpresa,
+          idTienda: idTienda,
+          idColor: idColor,
         );
 
         // Registrar el nuevo lote

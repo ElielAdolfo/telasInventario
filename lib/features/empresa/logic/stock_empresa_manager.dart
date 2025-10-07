@@ -85,7 +85,7 @@ class StockEmpresaManager with ChangeNotifier {
       // Verificar si hay suficiente disponible
       if (stock.cantidadDisponible < cantidad) {
         _error =
-            'Stock insuficiente. Disponible: ${stock.cantidadDisponible}, Solicitado: $cantidad';
+            'Stock insuficiente.. Disponible: ${stock.cantidadDisponible}, Solicitado: $cantidad';
         notifyListeners();
         return false;
       }

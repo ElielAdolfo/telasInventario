@@ -1,3 +1,5 @@
+// lib/features/venta/models/venta_item_model.dart
+
 class VentaItem {
   final String idProducto;
   final String nombreProducto;
@@ -5,13 +7,16 @@ class VentaItem {
   final String? nombreColor;
   final String? codigoColor;
   final double precio;
-  final int cantidad;
+  final double cantidad;
   final double subtotal;
   final String tipoVenta; // 'UNIDAD_COMPLETA' o 'UNIDAD_ABIERTA'
   final String? idStockTienda; // Referencia al stock de tienda
   final String? idStockUnidadAbierta; // Referencia a la unidad abierta
   final String?
   idStockLoteTienda; // Referencia al stock del lote tienda unidad secundaria
+
+  // Nuevo campo: código único del rollo
+  final String? codigoUnico;
 
   // Campos de auditoría
   final DateTime createdAt;
@@ -34,7 +39,8 @@ class VentaItem {
     this.idStockTienda,
     this.idStockUnidadAbierta,
     this.idStockLoteTienda,
-    // Campos de auditoría
+    this.codigoUnico, // Nuevo campo
+    // Auditoría
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -51,13 +57,14 @@ class VentaItem {
       nombreColor: json['nombreColor'],
       codigoColor: json['codigoColor'],
       precio: (json['precio'] ?? 0).toDouble(),
-      cantidad: json['cantidad'] ?? 0,
+      cantidad: (json['cantidad'] ?? 0).toDouble(),
       subtotal: (json['subtotal'] ?? 0).toDouble(),
       tipoVenta: json['tipoVenta'] ?? '',
       idStockTienda: json['idStockTienda'],
       idStockUnidadAbierta: json['idStockUnidadAbierta'],
       idStockLoteTienda: json['idStockLoteTienda'],
-      // Campos de auditoría
+      codigoUnico: json['codigoUnico'], // Nuevo campo
+      // Auditoría
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       deletedAt: json['deletedAt'] != null
@@ -83,7 +90,8 @@ class VentaItem {
       'idStockTienda': idStockTienda,
       'idStockUnidadAbierta': idStockUnidadAbierta,
       'idStockLoteTienda': idStockLoteTienda,
-      // Campos de auditoría
+      'codigoUnico': codigoUnico, // Nuevo campo
+      // Auditoría
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'deletedAt': deletedAt?.toIso8601String(),
@@ -93,7 +101,6 @@ class VentaItem {
     };
   }
 
-  // Método copyWith
   VentaItem copyWith({
     String? idProducto,
     String? nombreProducto,
@@ -101,13 +108,14 @@ class VentaItem {
     String? nombreColor,
     String? codigoColor,
     double? precio,
-    int? cantidad,
+    double? cantidad,
     double? subtotal,
     String? tipoVenta,
     String? idStockTienda,
     String? idStockUnidadAbierta,
     String? idStockLoteTienda,
-    // Campos de auditoría
+    String? codigoUnico, // Nuevo parámetro
+    // Auditoría
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? deletedAt,
@@ -128,7 +136,8 @@ class VentaItem {
       idStockTienda: idStockTienda ?? this.idStockTienda,
       idStockUnidadAbierta: idStockUnidadAbierta ?? this.idStockUnidadAbierta,
       idStockLoteTienda: idStockLoteTienda ?? this.idStockLoteTienda,
-      // Campos de auditoría
+      codigoUnico: codigoUnico ?? this.codigoUnico, // Nuevo campo
+      // Auditoría
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -138,7 +147,6 @@ class VentaItem {
     );
   }
 
-  // Método toString para depuración
   @override
   String toString() {
     return 'VentaItem('
@@ -154,6 +162,7 @@ class VentaItem {
         'idStockTienda: $idStockTienda, '
         'idStockUnidadAbierta: $idStockUnidadAbierta, '
         'idStockLoteTienda: $idStockLoteTienda, '
+        'codigoUnico: $codigoUnico, '
         'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '
         'createdBy: $createdBy, '

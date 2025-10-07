@@ -378,15 +378,15 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
         stock.colorNombre ?? '',
         widget.tienda.id,
       );
-      print("entro a cargar datos");
+      print(
+        "Cargando datos de lotes para: ${stock.nombre} - ${stock.colorNombre}",
+      );
     }
 
-    // ✅ Se carga inmediatamente si el tab inicial es el mismo
     if (tabController.index == tabIndex && futureLotes == null) {
       cargar();
     }
 
-    // ✅ Detecta cuando se cambia a este tab
     tabController.addListener(() {
       if (tabController.index == tabIndex) {
         cargar();
@@ -410,13 +410,19 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
             }
 
             if (snapshot.hasError) {
+              print("Error al cargar lotes: ${snapshot.error}");
               return Center(child: Text('Error: ${snapshot.error}'));
             }
 
             final lotes = snapshot.data ?? [];
+            print(
+              "Lotes obtenidos: ${lotes.length}",
+            ); // Filtrar lotes que estén abiertos y tengan stock disponible
             final lotesDisponibles = lotes
                 .where((lote) => lote.cantidadDisponible > 0)
                 .toList();
+
+            print("Lotes disponibles: ${lotesDisponibles.length}");
 
             if (lotesDisponibles.isEmpty) {
               return Center(
@@ -431,6 +437,9 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
               itemBuilder: (context, index) {
                 final lote = lotesDisponibles[index];
 
+                print(
+                  "Mostrando lote: ${lote.id}, cantidad: ${lote.cantidadDisponible}",
+                );
                 return Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -459,7 +468,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                         color: Colors.green,
                       ),
                       tooltip: 'Vender',
-                      onPressed: () => _mostrarDialogoVentaPorMetro(
+                      onPressed: () => _confirmarVentaPorMetro(
                         context,
                         manager,
                         lote,
@@ -476,322 +485,80 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     );
   }
 
-  void _mostrarDialogoVentaPorMetro(
+  void _confirmarVentaPorMetro(
     BuildContext context,
     VentaProductoManager manager,
     StockLoteTienda lote,
     StockTienda stock,
   ) {
+    // Validar stock disponible
+    if (lote.cantidadDisponible < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No hay stock disponible'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final carritoManager = Provider.of<CarritoManager>(context, listen: false);
-    final TextEditingController cantidadController = TextEditingController(
-      text: '1',
-    );
-    final TextEditingController precioController = TextEditingController();
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-    // Calcular precio inicial (precio por unidad secundaria)
-    final precioInicial = stock.precioVentaMenor; // Precio por metro
-    precioController.text = precioInicial.toStringAsFixed(2);
-
-    // Variable para el subtotal
-    double subtotal = precioInicial;
-
-    // Variable para controlar si se usa precio por mayor
-    bool usarPrecioPorMayor = false;
-
+    // Mostrar diálogo de confirmación simple
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          // Calcular subtotal cuando cambian los valores
-          void calcularSubtotal() {
-            final cantidad = int.tryParse(cantidadController.text) ?? 0;
-            final precio = double.tryParse(precioController.text) ?? 0;
-            setState(() {
-              subtotal = cantidad * precio;
-            });
-          }
+      builder: (context) => AlertDialog(
+        title: Text('Confirmar venta'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Producto: ${stock.nombre}'),
+            Text('Color: ${stock.colorNombre}'),
+            Text('Código: ${stock.colorCodigo ?? "N/A"}'),
+            Text('Subtotal: \$${stock.precioVentaMenor.toStringAsFixed(2)}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Crear item del carrito con valores fijos
+              final item = CarritoItem(
+                id: '${lote.id}_${DateTime.now().millisecondsSinceEpoch}',
+                idProducto: stock.id,
+                nombreProducto: stock.nombre,
+                idColor: stock.idColor,
+                nombreColor: stock.colorNombre,
+                codigoColor: stock.colorCodigo,
+                precio: stock.precioVentaMenor,
+                codigoUnico: stock.codigoUnico,
+                cantidad: 1,
+                tipoVenta: 'UNIDAD_ABIERTA',
+                idStockLoteTienda: lote.id,
+                idUsuario: _userId ?? 'usuario_desconocido',
+              );
 
-          // Cambiar entre precio normal y precio por mayor
-          void togglePrecioPorMayor(bool valor) {
-            setState(() {
-              usarPrecioPorMayor = valor;
-              if (valor) {
-                // Usar precio por mayor
-                precioController.text = stock.precioVentaMayor.toStringAsFixed(
-                  2,
-                );
-              } else {
-                // Usar precio normal
-                precioController.text = stock.precioVentaMenor.toStringAsFixed(
-                  2,
-                );
-              }
-              calcularSubtotal();
-            });
-          }
+              // Agregar al carrito
+              carritoManager.agregarUnidadAbierta(item, lote.id);
 
-          // Verificar si se debe activar automáticamente el precio por mayor
-          void verificarActivacionPrecioPorMayor() {
-            final cantidad = int.tryParse(cantidadController.text) ?? 0;
-            if (cantidad >= 10 && !usarPrecioPorMayor) {
-              // Activar automáticamente si la cantidad es 10 o más
-              togglePrecioPorMayor(true);
-            } else if (cantidad < 10 && usarPrecioPorMayor) {
-              // Desactivar automáticamente si la cantidad es menor a 10
-              togglePrecioPorMayor(false);
-            }
-          }
+              // Cerrar modal
+              Navigator.pop(context);
 
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: _parseColor(stock.colorCodigo),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Vender por ${stock.unidadMedidaSecundaria}',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
+              // Mostrar mensaje de éxito
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Producto agregado al carrito'),
+                  backgroundColor: Colors.green,
                 ),
-                Divider(),
-              ],
-            ),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Información del producto
-                    _buildInfoCard(
-                      title: 'Información del Producto',
-                      children: [
-                        _buildInfoRow('Producto:', stock.nombre),
-                        _buildInfoRow(
-                          'Color:',
-                          stock.colorNombre ?? 'Sin color',
-                        ),
-                        _buildInfoRow(
-                          'Disponible:',
-                          '${lote.cantidadDisponible} ${stock.unidadMedidaSecundaria}',
-                        ),
-                        _buildInfoRow(
-                          'Fecha de apertura:',
-                          lote.fechaApertura.toString().substring(0, 10),
-                        ),
-                        // Mostrar precios de referencia
-                        _buildInfoRow(
-                          'Precio normal:',
-                          '\$${stock.precioVentaMenor.toStringAsFixed(2)}',
-                          color: Colors.blue,
-                        ),
-                        _buildInfoRow(
-                          'Precio por mayor (10+):',
-                          '\$${stock.precioVentaMayor.toStringAsFixed(2)}',
-                          color: Colors.green,
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Campos de entrada
-                    _buildInputCard(
-                      title: 'Detalles de Venta',
-                      children: [
-                        TextFormField(
-                          controller: cantidadController,
-                          decoration: InputDecoration(
-                            labelText:
-                                'Cantidad (${stock.unidadMedidaSecundaria})',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.inventory_2),
-                            helperText:
-                                'Al ingresar 10 o más unidades, se aplicará precio por mayor automáticamente',
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            calcularSubtotal();
-                            verificarActivacionPrecioPorMayor();
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Ingrese una cantidad';
-                            }
-                            final cantidad = int.tryParse(value);
-                            if (cantidad == null || cantidad <= 0) {
-                              return 'Ingrese una cantidad válida';
-                            }
-                            if (cantidad > lote.cantidadDisponible) {
-                              return 'Stock insuficiente. Disponible: ${lote.cantidadDisponible}';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: precioController,
-                                decoration: InputDecoration(
-                                  labelText:
-                                      'Precio por ${stock.unidadMedidaSecundaria}',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.attach_money),
-                                  suffixText: 'Bs',
-                                ),
-                                keyboardType: TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
-                                onChanged: (value) => calcularSubtotal(),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Ingrese un precio';
-                                  }
-                                  final precio = double.tryParse(value);
-                                  if (precio == null || precio <= 0) {
-                                    return 'Ingrese un precio válido';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Container(
-                              width: 60,
-                              height: 60,
-                              child: InkWell(
-                                onTap: () =>
-                                    togglePrecioPorMayor(!usarPrecioPorMayor),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: usarPrecioPorMayor
-                                        ? Theme.of(context).primaryColor
-                                        : Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: usarPrecioPorMayor
-                                          ? Theme.of(context).primaryColor
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        usarPrecioPorMayor
-                                            ? Icons.check_circle
-                                            : Icons.circle_outlined,
-                                        color: usarPrecioPorMayor
-                                            ? Colors.white
-                                            : Colors.grey,
-                                        size: 20,
-                                      ),
-                                      Text(
-                                        'Mayor',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: usarPrecioPorMayor
-                                              ? Colors.white
-                                              : Colors.grey,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        _buildInfoRow(
-                          'Subtotal:',
-                          '\$${subtotal.toStringAsFixed(2)}',
-                          isBold: true,
-                        ),
-                        SizedBox(height: 8),
-                        _buildInfoRow(
-                          'Cantidad restante:',
-                          '${lote.cantidadDisponible - (int.tryParse(cantidadController.text) ?? 0)} ${stock.unidadMedidaSecundaria}',
-                          color: Colors.red,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    final cantidad = int.parse(cantidadController.text);
-                    final precio = double.parse(precioController.text);
-
-                    // Crear item del carrito con todos los campos necesarios
-                    final item = CarritoItem(
-                      id: '${lote.id}_${DateTime.now().millisecondsSinceEpoch}',
-                      idProducto: stock.id,
-                      nombreProducto: stock.nombre,
-                      idColor: stock.idColor,
-                      nombreColor: stock.colorNombre,
-                      codigoColor: stock.colorCodigo,
-                      precio: precio,
-                      cantidad: cantidad,
-                      tipoVenta: 'UNIDAD_ABIERTA',
-                      idStockLoteTienda:
-                          lote.id, // Guardamos referencia al lote
-                      idUsuario: _userId ?? 'usuario_desconocido',
-                    );
-
-                    // Agregar al carrito
-                    carritoManager.agregarUnidadAbierta(item, lote.id);
-
-                    // Cerrar modal
-                    Navigator.pop(context);
-
-                    // Mostrar mensaje de éxito
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Producto agregado al carrito'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: Text('Agregar al carrito'),
-              ),
-            ],
-          );
-        },
+              );
+            },
+            child: Text('Confirmar'),
+          ),
+        ],
       ),
     );
   }
@@ -807,13 +574,13 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     final TextEditingController codigoBusquedaController =
         TextEditingController();
 
-    void cargar() {
+    void cargarRollos() {
       futureStocks = _cargarStocks(manager, stock);
     }
 
     tabController.addListener(() {
       if (tabController.index == tabIndex) {
-        cargar();
+        cargarRollos();
       }
     });
 
@@ -821,9 +588,15 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
       builder: (context, setState) {
         if (futureStocks == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            cargar();
+            cargarRollos();
             setState(() {});
           });
+        }
+
+        // Función para recargar los datos
+        void recargar() {
+          cargarRollos();
+          setState(() {});
         }
 
         return Column(
@@ -896,66 +669,108 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     );
                   }
 
-                  return ListView.builder(
-                    itemCount: stocksFiltrados.length,
-                    itemBuilder: (context, index) {
-                      final stockTienda = stocksFiltrados[index];
+                  return Consumer<CarritoManager>(
+                    builder: (context, carritoManager, child) {
+                      return ListView.builder(
+                        itemCount: stocksFiltrados.length,
+                        itemBuilder: (context, index) {
+                          final stockTienda = stocksFiltrados[index];
 
-                      // Calcular subtotal: metraje * precioPaquete
-                      final subtotal =
-                          stockTienda.cantidad *
-                          (stockTienda.precioPaquete ?? 0);
+                          // Calcular subtotal: metraje * precioPaquete
+                          final subtotal =
+                              stockTienda.cantidad *
+                              (stockTienda.precioPaquete ?? 0);
 
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
-                        ),
-                        elevation: 2,
-                        child: ListTile(
-                          leading: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: _parseColor(stockTienda.colorCodigo),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey),
+                          // Verificar si el rollo ya está en el carrito
+                          final bool enCarrito = carritoManager.items.any(
+                            (item) =>
+                                item.idStockTienda == stockTienda.id &&
+                                item.tipoVenta == 'UNIDAD_COMPLETA',
+                          );
+
+                          return Card(
+                            color: enCarrito
+                                ? Colors.red[50]
+                                : null, // Color rojo suave si está en el carrito
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
                             ),
-                          ),
-                          title: Text(
-                            '${stockTienda.nombre} - ${stockTienda.colorNombre}',
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Código: ${stockTienda.codigoUnico ?? "N/A"}',
+                            elevation: 2,
+                            child: ListTile(
+                              leading: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: _parseColor(stockTienda.colorCodigo),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.grey),
+                                ),
                               ),
-                              Text('Metros: ${stockTienda.cantidad}'),
-                              Text(
-                                'Precio por paquete: \$${(stockTienda.precioPaquete ?? 0).toStringAsFixed(2)}',
+                              title: Text(
+                                '${stockTienda.nombre} - ${stockTienda.colorNombre}',
                               ),
-                              Text(
-                                'Subtotal: \$${subtotal.toStringAsFixed(2)}',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Código: ${stockTienda.codigoUnico ?? "N/A"}',
+                                  ),
+                                  Text('Metros: ${stockTienda.cantidad}'),
+                                  Text(
+                                    'Precio por paquete: \$${(stockTienda.precioPaquete ?? 0).toStringAsFixed(2)}',
+                                  ),
+                                  Text(
+                                    'Subtotal: \$${subtotal.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          isThreeLine: true,
-                          trailing: IconButton(
-                            icon: Icon(
-                              Icons.shopping_cart,
-                              color: Colors.green,
+                              isThreeLine: true,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Botón de abrir rollo
+                                  if (!enCarrito)
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.open_in_new,
+                                        color: Colors.blue,
+                                      ),
+                                      tooltip: 'Abrir rollo',
+                                      onPressed: () => _confirmarAbrirRollo(
+                                        context,
+                                        manager,
+                                        stockTienda,
+                                        stock,
+                                        recargar,
+                                      ),
+                                    ),
+                                  // Botón de vender (solo si no está en el carrito)
+                                  if (!enCarrito)
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.shopping_cart,
+                                        color: Colors.green,
+                                      ),
+                                      tooltip: 'Vender',
+                                      onPressed: () => _confirmarVentaPorRollo(
+                                        context,
+                                        manager,
+                                        stockTienda,
+                                        stock,
+                                      ),
+                                    ),
+                                  // Si está en el carrito, mostrar un icono de check
+                                  if (enCarrito)
+                                    Icon(Icons.check_circle, color: Colors.red),
+                                ],
+                              ),
                             ),
-                            tooltip: 'Vender',
-                            onPressed: () => _mostrarDialogoVentaPorRollo(
-                              context,
-                              manager,
-                              stockTienda,
-                              stock,
-                            ),
-                          ),
-                        ),
+                          );
+                        },
                       );
                     },
                   );
@@ -968,334 +783,183 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     );
   }
 
-  void _mostrarDialogoVentaPorRollo(
+  void _confirmarVentaPorRollo(
     BuildContext context,
     VentaProductoManager manager,
     StockTienda stockTienda,
     StockTienda stock,
   ) {
+    // Validar stock disponible
+    if (stockTienda.cantidadDisponible < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No hay stock disponible'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final carritoManager = Provider.of<CarritoManager>(context, listen: false);
-    final TextEditingController cantidadController = TextEditingController(
-      text: '1',
-    );
-    final TextEditingController precioController = TextEditingController();
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-    // Usar precioPaquete como precio inicial
-    final precioInicial = stockTienda.precioPaquete ?? 0;
-    precioController.text = precioInicial.toStringAsFixed(2);
-
-    // Variable para el subtotal
-    double subtotal = precioInicial * stockTienda.cantidad;
-
+    // Mostrar diálogo de confirmación simple
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          // Calcular subtotal cuando cambian los valores
-          void calcularSubtotal() {
-            final cantidad = int.tryParse(cantidadController.text) ?? 0;
-            final precio = double.tryParse(precioController.text) ?? 0;
-            setState(() {
-              subtotal = cantidad * precio * stockTienda.cantidad;
-            });
-          }
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+      builder: (context) => AlertDialog(
+        title: Text('Confirmar venta'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Producto: ${stock.nombre}'),
+            Text('Color: ${stock.colorNombre}'),
+            Text('Cantidad: ${stockTienda.cantidad ?? "N/A"}'),
+            Text('Código: ${stockTienda.codigoUnico ?? "N/A"}'),
+            Text(
+              'Subtotal: \$${((stockTienda.precioPaquete! * stockTienda.cantidad!) ?? 0).toStringAsFixed(2)}',
             ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: _parseColor(stock.colorCodigo),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Agregar al carrito - ${stock.unidadMedida}',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Crear item del carrito con valores fijos
+              print(stock.toString());
+              final item = CarritoItem(
+                id: '${stockTienda.id}_rollo_${DateTime.now().millisecondsSinceEpoch}',
+                idProducto: stock.id,
+                nombreProducto: stock.nombre,
+                idColor: stock.idColor,
+                nombreColor: stock.colorNombre,
+                codigoColor: stock.colorCodigo,
+                codigoUnico: stock.codigoUnico,
+                precio: stockTienda.precioPaquete ?? 0,
+                cantidad: stockTienda.cantidad,
+                tipoVenta: 'UNIDAD_COMPLETA',
+                idStockTienda: stockTienda.id,
+                idUsuario: _userId ?? 'usuario_desconocido',
+              );
+              print('Calor de Carrito:\n' + item.toString());
+              // Agregar al carrito
+              carritoManager.agregarUnidadCompleta(item, stockTienda.id);
+
+              // Cerrar modal
+              Navigator.pop(context);
+
+              // Mostrar mensaje de éxito
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Producto agregado al carrito'),
+                  backgroundColor: Colors.green,
                 ),
-                Divider(),
-              ],
-            ),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Información del producto
-                    _buildInfoCard(
-                      title: 'Información del Producto',
-                      children: [
-                        _buildInfoRow('Producto:', stock.nombre),
-                        _buildInfoRow(
-                          'Color:',
-                          stock.colorNombre ?? 'Sin color',
-                        ),
-                        _buildInfoRow(
-                          'Código:',
-                          stockTienda.codigoUnico ?? "N/A",
-                        ),
-                        _buildInfoRow('Metros:', '${stockTienda.cantidad}'),
-                        _buildInfoRow(
-                          'Precio por paquete:',
-                          '\$${(stockTienda.precioPaquete ?? 0).toStringAsFixed(2)}',
-                          isBold: true,
-                          color: Colors.green,
-                        ),
-                        _buildInfoRow(
-                          'Subtotal:',
-                          '\$${subtotal.toStringAsFixed(2)}',
-                          isBold: true,
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Campos de entrada
-                    _buildInputCard(
-                      title: 'Detalles de Venta',
-                      children: [
-                        TextFormField(
-                          controller: cantidadController,
-                          decoration: InputDecoration(
-                            labelText: 'Cantidad (${stock.unidadMedida})',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.inventory_2),
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (value) => calcularSubtotal(),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Ingrese una cantidad';
-                            }
-                            final cantidad = int.tryParse(value);
-                            if (cantidad == null || cantidad <= 0) {
-                              return 'Ingrese una cantidad válida';
-                            }
-                            if (cantidad > stockTienda.cantidadDisponible) {
-                              return 'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 12),
-                        TextFormField(
-                          controller: precioController,
-                          decoration: InputDecoration(
-                            labelText: 'Precio por ${stock.unidadMedida}',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.attach_money),
-                            suffixText: 'Bs',
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          onChanged: (value) => calcularSubtotal(),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Ingrese un precio';
-                            }
-                            final precio = double.tryParse(value);
-                            if (precio == null || precio <= 0) {
-                              return 'Ingrese un precio válido';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 12),
-                        _buildInfoRow(
-                          'Subtotal:',
-                          '\$${subtotal.toStringAsFixed(2)}',
-                          isBold: true,
-                        ),
-                        SizedBox(height: 8),
-                        _buildInfoRow(
-                          'Cantidad restante:',
-                          '${stockTienda.cantidadDisponible - (int.tryParse(cantidadController.text) ?? 0)} ${stock.unidadMedida}',
-                          color: Colors.red,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    final cantidad = int.parse(cantidadController.text);
-                    final precio = double.parse(precioController.text);
-
-                    // Crear item del carrito con todos los campos necesarios
-                    final item = CarritoItem(
-                      id: '${stockTienda.id}_rollo_${DateTime.now().millisecondsSinceEpoch}',
-                      idProducto: stock.id,
-                      nombreProducto: stock.nombre,
-                      idColor: stock.idColor,
-                      nombreColor: stock.colorNombre,
-                      codigoColor: stock.colorCodigo,
-                      precio: precio,
-                      cantidad: cantidad,
-                      tipoVenta: 'UNIDAD_COMPLETA',
-                      idStockTienda: stockTienda.id,
-                      idUsuario: _userId ?? 'usuario_desconocido',
-                    );
-
-                    // Agregar al carrito (sin vender todavía)
-                    carritoManager.agregarUnidadCompleta(item, stockTienda.id);
-
-                    // Cerrar modal
-                    Navigator.pop(context);
-
-                    // Mostrar mensaje de éxito
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Producto agregado al carrito'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: Text('Agregar al carrito'),
-              ),
-            ],
-          );
-        },
+              );
+            },
+            child: Text('Confirmar'),
+          ),
+        ],
       ),
     );
   }
 
-  void _abrirUnidad(
+  void _confirmarAbrirRollo(
     BuildContext context,
-    StockTienda stockTienda,
     VentaProductoManager manager,
+    StockTienda stockTienda,
     StockTienda stock,
+    VoidCallback recargar,
   ) {
-    final TextEditingController cantidadController = TextEditingController(
-      text: '1',
-    );
-    bool desbloqueado = false;
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: Text('Abrir unidad de ${stock.nombre}'),
-            content: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Nombre: ${stock.nombre}'),
-                  SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: cantidadController,
-                          enabled: desbloqueado,
-                          decoration: InputDecoration(
-                            labelText: 'Cantidad (${stock.unidadMedida})',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Ingrese una cantidad';
-                            }
-                            final cantidad = int.tryParse(value);
-                            if (cantidad == null || cantidad <= 0) {
-                              return 'Cantidad inválida';
-                            }
-                            if (cantidad > stockTienda.cantidadDisponible) {
-                              return 'Stock insuficiente. Disponible: ${stockTienda.cantidadDisponible}';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(desbloqueado ? Icons.lock_open : Icons.lock),
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar apertura'),
+        content: Text(
+          '¿Está seguro de abrir el rollo ${stockTienda.codigoUnico ?? ""} de ${stock.nombre}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final resultado = await manager.abrirUnidad(
+                stockTienda.id,
+                1, // cantidadUnidades, por defecto 1
+                _userId!, // usuario actual
+                widget.tienda.id,
+                stockTienda.codigoUnico,
+                stockTienda.idTipoProducto!,
+                stockTienda.idEmpresa,
+                stockTienda.idColor,
+                stockTienda.cantidad, //cantidadMetraje
+              );
+
+              Navigator.pop(context); // cerrar el diálogo de confirmación
+
+              if (resultado) {
+                // Mostrar modal informativo de éxito
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    title: Row(
+                      children: const [
+                        Icon(Icons.check_circle, color: Colors.green, size: 30),
+                        SizedBox(width: 10),
+                        Text('Éxito'),
+                      ],
+                    ),
+                    content: const Text('Unidad abierta correctamente.'),
+                    actions: [
+                      TextButton(
                         onPressed: () {
-                          setStateDialog(() {
-                            desbloqueado = true; // desbloquea el input
+                          Navigator.pop(context); // cerrar modal de éxito
+
+                          // 🔄 Refrescar lista después de cerrar el modal
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            recargar();
                           });
                         },
+                        child: const Text('OK'),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    final cantidad = double.parse(cantidadController.text);
-
-                    // Abrir las unidades
-                    final resultado = await manager.abrirUnidad(
-                      stockTienda.id,
-                      cantidad, // cantidadUnidades
-                      _userId!, // Esto debería ser el usuario actual
-                      widget.tienda.id,
-                    );
-
-                    if (resultado) {
-                      Navigator.pop(context);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Unidades abiertas correctamente'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: ${manager.error}'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: Text('Agregar'),
-              ),
-            ],
-          );
-        },
+                );
+              } else {
+                // Modal de error
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    title: Row(
+                      children: const [
+                        Icon(Icons.error, color: Colors.red, size: 30),
+                        SizedBox(width: 10),
+                        Text('Error'),
+                      ],
+                    ),
+                    content: Text(manager.error ?? 'Error desconocido.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+            child: const Text('Abrir'),
+          ),
+        ],
       ),
     );
   }

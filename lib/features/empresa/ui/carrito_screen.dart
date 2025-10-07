@@ -432,6 +432,7 @@ class _CarritoScreenState extends State<CarritoScreen>
               idStockTienda: item.idStockTienda,
               idStockUnidadAbierta: item.idStockUnidadAbierta,
               idStockLoteTienda: item.idStockLoteTienda,
+              codigoUnico: item.codigoUnico,
               // Campos de auditoría
               createdAt: DateTime.now(),
               createdBy: usuario,
