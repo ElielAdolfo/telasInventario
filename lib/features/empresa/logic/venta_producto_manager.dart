@@ -47,6 +47,42 @@ class VentaProductoManager extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  Future<bool> cerrarLote(String idLote, String cerradoPor) async {
+    try {
+      // Obtener el lote actualizado
+      final lote = await _stockLoteTiendaService.getLoteById(idLote);
+
+      if (lote == null) {
+        _error = 'No se encontró el lote';
+        notifyListeners();
+        return false;
+      }
+
+      // Actualizar el lote como cerrado
+      final loteActualizado = lote.copyWith(
+        estaCerrada: true,
+        fechaCierre: DateTime.now(),
+        cerradoPor: cerradoPor,
+      );
+
+      final resultado = await _stockLoteTiendaService.updateLote(
+        loteActualizado,
+      );
+
+      if (resultado) {
+        return true;
+      } else {
+        _error = 'No se pudo cerrar el lote';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> cargarDatosIniciales(String tiendaId) async {
     _isLoading = true;
     _error = null;
@@ -451,6 +487,11 @@ class VentaProductoManager extends ChangeNotifier {
     String idEmpresa, // ✅ Nuevo campo
     String? idColor,
     double metraje,
+
+    double precioCompra,
+    double precioVentaMenor,
+    double precioVentaMayor,
+    double precioPaquete,
   ) async {
     try {
       // Obtener el stock de tienda actualizado
@@ -488,6 +529,10 @@ class VentaProductoManager extends ChangeNotifier {
           idEmpresa: idEmpresa,
           idTienda: idTienda,
           idColor: idColor,
+          precioCompra: precioCompra,
+          precioPaquete: precioPaquete,
+          precioVentaMayor: precioVentaMayor,
+          precioVentaMenor: precioVentaMenor,
         );
 
         // Registrar el nuevo lote

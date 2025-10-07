@@ -255,7 +255,7 @@ class SolicitudTraslado {
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
-    double? precioPaquete, // Nuevo campo
+    double? precioPaquete, 
     double? cantidad, // Nuevo campo en copyWith
     String? lote,
     DateTime? fechaVencimiento,

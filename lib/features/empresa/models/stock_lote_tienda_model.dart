@@ -13,11 +13,17 @@ class StockLoteTienda {
   final bool deleted;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String? codigoUnico; // ✅ Nuevo campo
-  final String idTipoProducto; // ✅ Nuevo campo
-  final String idEmpresa; // ✅ Nuevo campo
-  final String idTienda; // ✅ Nuevo campo
-  final String? idColor; // ✅ Nuevo campo opcional
+  final String? codigoUnico;
+  final String idTipoProducto;
+  final String idEmpresa;
+  final String idTienda;
+  final String? idColor;
+
+  // ✅ Nuevos campos de precios
+  final double? precioCompra;
+  final double? precioVentaMenor;
+  final double? precioVentaMayor;
+  final double? precioPaquete;
 
   StockLoteTienda({
     required this.id,
@@ -36,7 +42,11 @@ class StockLoteTienda {
     required this.idTipoProducto,
     required this.idEmpresa,
     required this.idTienda,
-    this.idColor, // ✅ agregado al constructor
+    this.idColor,
+    this.precioCompra,
+    this.precioVentaMenor,
+    this.precioVentaMayor,
+    this.precioPaquete,
   });
 
   double get cantidadDisponible => cantidad - cantidadVendida;
@@ -61,7 +71,11 @@ class StockLoteTienda {
       idTipoProducto: json['idTipoProducto'] ?? '',
       idEmpresa: json['idEmpresa'] ?? '',
       idTienda: json['idTienda'] ?? '',
-      idColor: json['idColor'], // ✅ agregado
+      idColor: json['idColor'],
+      precioCompra: (json['precioCompra'] ?? 0).toDouble(),
+      precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
+      precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
+      precioPaquete: (json['precioPaquete'] ?? 0).toDouble(),
     );
   }
 
@@ -82,7 +96,11 @@ class StockLoteTienda {
       'idTipoProducto': idTipoProducto,
       'idEmpresa': idEmpresa,
       'idTienda': idTienda,
-      'idColor': idColor, // ✅ agregado
+      'idColor': idColor,
+      'precioCompra': precioCompra,
+      'precioVentaMenor': precioVentaMenor,
+      'precioVentaMayor': precioVentaMayor,
+      'precioPaquete': precioPaquete,
     };
   }
 
@@ -103,7 +121,11 @@ class StockLoteTienda {
     String? idTipoProducto,
     String? idEmpresa,
     String? idTienda,
-    String? idColor, // ✅ agregado
+    String? idColor,
+    double? precioCompra,
+    double? precioVentaMenor,
+    double? precioVentaMayor,
+    double? precioPaquete,
   }) {
     return StockLoteTienda(
       id: id ?? this.id,
@@ -122,7 +144,11 @@ class StockLoteTienda {
       idTipoProducto: idTipoProducto ?? this.idTipoProducto,
       idEmpresa: idEmpresa ?? this.idEmpresa,
       idTienda: idTienda ?? this.idTienda,
-      idColor: idColor ?? this.idColor, // ✅ agregado
+      idColor: idColor ?? this.idColor,
+      precioCompra: precioCompra ?? this.precioCompra,
+      precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
+      precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
+      precioPaquete: precioPaquete ?? this.precioPaquete,
     );
   }
 
@@ -146,7 +172,11 @@ class StockLoteTienda {
         'deleted: $deleted, '
         'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '
-        'codigoUnico: $codigoUnico'
+        'codigoUnico: $codigoUnico, '
+        'precioCompra: $precioCompra, '
+        'precioVentaMenor: $precioVentaMenor, '
+        'precioVentaMayor: $precioVentaMayor, '
+        'precioPaquete: $precioPaquete'
         ')';
   }
 }
