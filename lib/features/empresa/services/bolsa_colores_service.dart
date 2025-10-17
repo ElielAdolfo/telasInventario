@@ -23,6 +23,9 @@ class BolsaColoresService extends BaseService {
     bool requiereColor,
     List<double> cantidadesPosibles,
     double cantidadPrioritaria,
+
+    String idMoneda,
+    double tipoCambio,
   ) async {
     // Procesar cada entrada individualmente con sus propios atributos
     for (var entrada in bolsa.entradas) {
@@ -59,6 +62,8 @@ class BolsaColoresService extends BaseService {
         updatedBy: userId,
         deletedBy: null,
         deletedAt: null,
+        idMoneda: idMoneda,
+        tipoCambio: tipoCambio,
       );
 
       await _stockService.createStockEmpresa(stock, userId);

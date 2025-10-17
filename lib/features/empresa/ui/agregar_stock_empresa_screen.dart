@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
+import 'package:inventario/features/empresa/logic/moneda_manager.dart';
 import 'package:inventario/features/empresa/logic/tipo_producto_manager.dart';
 import 'package:inventario/features/empresa/models/bolsa_colores_model.dart';
 import 'package:inventario/features/empresa/models/color_con_cantidad_model.dart';
 import 'package:inventario/features/empresa/models/color_model.dart';
+import 'package:inventario/features/empresa/models/moneda_model.dart';
 import 'package:inventario/features/empresa/models/tipo_producto_model.dart';
 import 'package:inventario/features/empresa/services/bolsa_colores_service.dart';
 import 'package:inventario/features/empresa/ui/detalle_stock_screen.dart';
@@ -50,6 +52,11 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
   double _cantidadPrioritaria = 0;
   int _unidades = 1;
 
+  // Variables para moneda y tipo de cambio
+  Moneda? _monedaSeleccionada;
+  double _tipoCambio = 1.0;
+  double _valorTotal = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -73,9 +80,16 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<ColorManager>(context, listen: false).loadColores();
     });
+    // Cargar monedas
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<MonedaManager>(context, listen: false).loadMonedas();
+    });
 
     final authManager = Provider.of<AuthManager>(context, listen: false);
     _userId = authManager.userId;
+
+    // Configurar listener para el campo de precio de compra
+    _precioCompraController.addListener(_calcularValorTotal);
   }
 
   @override
@@ -130,7 +144,6 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     }
   }
 
-  // Modificado para navegar a la nueva pantalla en lugar de guardar directamente
   void _guardarStock(String? userId) async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -189,12 +202,13 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
           precioPaquete: _precioPaqueteController.text.isNotEmpty
               ? double.tryParse(_precioPaqueteController.text)
               : null,
+          moneda: _monedaSeleccionada,
+          tipoCambio: _tipoCambio,
         ),
       ),
     );
   }
 
-  // Método para agregar un nuevo color
   void _agregarColor(ColorProducto color) {
     if (_cantidadPrioritaria <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -250,18 +264,38 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     });
   }
 
-  // Método para actualizar una entrada de color
   void _actualizarEntradaColor(int index, ColorConCantidad nuevaEntrada) {
     setState(() {
       _coloresSeleccionados[index] = nuevaEntrada;
     });
   }
 
-  // Método para eliminar una entrada de color
   void _eliminarEntradaColor(int index) {
     setState(() {
       _coloresSeleccionados.removeAt(index);
     });
+  }
+
+  // Método para calcular el valor total
+  void _calcularValorTotal() {
+    final precioCompra = double.tryParse(_precioCompraController.text) ?? 0.0;
+    setState(() {
+      _valorTotal = precioCompra * _tipoCambio;
+    });
+  }
+
+  // Método para manejar el cambio de moneda
+  void _cambioMoneda(Moneda? nuevaMoneda) {
+    if (nuevaMoneda != null) {
+      setState(() {
+        _monedaSeleccionada = nuevaMoneda;
+        _tipoCambio = nuevaMoneda.tipoCambio;
+        // Limpiar el campo de precio de compra
+        _precioCompraController.clear();
+        // Recalcular el valor total
+        _calcularValorTotal();
+      });
+    }
   }
 
   @override
@@ -523,9 +557,9 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
+
               // Campo Precio de Compra con validaciones
               Divider(),
-
               Text(
                 'Precio:',
                 style: TextStyle(
@@ -534,24 +568,145 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              TextFormField(
-                controller: _precioCompraController,
-                decoration: const InputDecoration(
-                  labelText: 'De Compra',
-                  hintText: 'Por metro',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.money_off),
-                ),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ingrese el precio de compra';
+
+              // Selector de moneda y campo de precio de compra
+              Consumer<MonedaManager>(
+                builder: (context, manager, child) {
+                  if (manager.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
                   }
-                  final precio = double.tryParse(value);
-                  if (precio == null || precio <= 0) {
-                    return 'Ingrese un precio válido';
+
+                  if (manager.error != null) {
+                    return Text('Error: ${manager.error}');
                   }
-                  return null;
+
+                  // Encontrar la moneda principal solo si no hay una moneda seleccionada
+                  if (_monedaSeleccionada == null &&
+                      manager.monedas.isNotEmpty) {
+                    final monedaPrincipal = manager.monedas.firstWhere(
+                      (moneda) => moneda.principal,
+                      orElse: () => manager.monedas.first,
+                    );
+                    _monedaSeleccionada = monedaPrincipal;
+                    _tipoCambio = monedaPrincipal.tipoCambio;
+                  }
+
+                  // Si tenemos una moneda seleccionada pero no está en la lista actual,
+                  // buscar una moneda equivalente por ID
+                  if (_monedaSeleccionada != null) {
+                    final monedaEquivalente = manager.monedas
+                        .where((m) => m.id == _monedaSeleccionada!.id)
+                        .firstOrNull;
+
+                    if (monedaEquivalente != null) {
+                      _monedaSeleccionada = monedaEquivalente;
+                    } else if (manager.monedas.isNotEmpty) {
+                      // Si no encontramos la moneda equivalente, usar la principal
+                      _monedaSeleccionada = manager.monedas.firstWhere(
+                        (moneda) => moneda.principal,
+                        orElse: () => manager.monedas.first,
+                      );
+                      _tipoCambio = _monedaSeleccionada!.tipoCambio;
+                    }
+                  }
+
+                  return Column(
+                    children: [
+                      // Selector de moneda
+                      DropdownButtonFormField<Moneda>(
+                        value: _monedaSeleccionada,
+                        decoration: const InputDecoration(
+                          labelText: 'Moneda',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.monetization_on),
+                        ),
+                        items: manager.monedas.map((moneda) {
+                          return DropdownMenuItem<Moneda>(
+                            value: moneda,
+                            child: Text('${moneda.nombre} (${moneda.codigo})'),
+                          );
+                        }).toList(),
+                        onChanged: _cambioMoneda,
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Seleccione una moneda';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Campo de precio de compra
+                      TextFormField(
+                        controller: _precioCompraController,
+                        decoration: InputDecoration(
+                          labelText: 'De Compra',
+                          hintText:
+                              'Precio en ${_monedaSeleccionada?.nombre ?? 'moneda seleccionada'}',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.money_off),
+                          suffixText: _monedaSeleccionada?.simbolo ?? '',
+                        ),
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Ingrese el precio de compra';
+                          }
+                          final precio = double.tryParse(value);
+                          if (precio == null || precio <= 0) {
+                            return 'Ingrese un precio válido';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Campo de tipo de cambio (solo lectura)
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Tipo de Cambio',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.currency_exchange),
+                          suffixText: _monedaSeleccionada?.simbolo ?? '',
+                        ),
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        readOnly: true,
+                        controller: TextEditingController(
+                          text: _tipoCambio.toString(),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Mostrar valor total
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Valor Total:',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '${_valorTotal.toStringAsFixed(2)} ${_monedaSeleccionada?.simbolo ?? ''}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
                 },
               ),
 
@@ -564,6 +719,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                   hintText: 'Por metro',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.inventory_2),
+                  suffixText: 'Bs', // Moneda principal (Boliviano)
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
@@ -592,6 +748,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                   hintText: 'Por metro',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.trending_up),
+                  suffixText: 'Bs', // Moneda principal (Boliviano)
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
@@ -618,6 +775,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                   hintText: 'Por metro',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.trending_down),
+                  suffixText: 'Bs', // Moneda principal (Boliviano)
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {

@@ -1,6 +1,7 @@
 // lib/features/stock/logic/bolsa_colores_manager.dart
 
 import 'package:flutter/material.dart';
+import 'package:inventario/features/empresa/models/moneda_model.dart';
 import '../models/bolsa_colores_model.dart';
 import '../services/bolsa_colores_service.dart';
 
@@ -27,6 +28,9 @@ class BolsaColoresManager with ChangeNotifier {
     required bool requiereColor,
     required List<double> cantidadesPosibles,
     required double cantidadPrioritaria,
+
+    required Moneda? moneda,
+    required double tipoCambio,
   }) async {
     _isLoading = true;
     _error = null;
@@ -46,6 +50,8 @@ class BolsaColoresManager with ChangeNotifier {
         requiereColor,
         cantidadesPosibles,
         cantidadPrioritaria,
+        moneda!.id,
+        tipoCambio,
       );
 
       // Notificar que la operación se completó exitosamente

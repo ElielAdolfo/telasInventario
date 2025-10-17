@@ -127,4 +127,24 @@ class Moneda {
         'restoredBy: $restoredBy'
         ')';
   }
+
+  static Moneda empty() {
+    final now = DateTime.now();
+    return Moneda(
+      id: '',
+      nombre: '',
+      codigo: '',
+      simbolo: '\$', // puedes cambiarlo si deseas otro por defecto
+      principal: false,
+      tipoCambio: 1.0,
+      deleted: false,
+      deletedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: null,
+      updatedBy: null,
+      deletedBy: null,
+      restoredBy: null,
+    );
+  }
 }

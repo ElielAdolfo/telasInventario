@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:inventario/features/empresa/models/color_con_cantidad_model.dart';
 import 'package:inventario/features/empresa/models/item_stock_model.dart';
+import 'package:inventario/features/empresa/models/moneda_model.dart';
 import 'package:inventario/features/empresa/models/stock_empresa_model.dart';
 import 'package:inventario/features/empresa/models/tipo_producto_model.dart';
 import 'package:inventario/features/empresa/services/bolsa_colores_service.dart';
@@ -22,6 +23,9 @@ class DetalleStockScreen extends StatefulWidget {
   final double precioVentaMayor;
   final double? precioPaquete;
 
+  final Moneda? moneda;
+  final double tipoCambio;
+
   const DetalleStockScreen({
     super.key,
     required this.idEmpresa,
@@ -36,6 +40,8 @@ class DetalleStockScreen extends StatefulWidget {
     required this.precioVentaMenor,
     required this.precioVentaMayor,
     this.precioPaquete,
+    this.moneda,
+    this.tipoCambio = 1.0,
   });
 
   @override
@@ -243,6 +249,8 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
           deletedAt: null,
           // CAMPO NUEVO: Guardar el código único del rollo
           codigoUnico: item.codigo,
+          idMoneda: widget.moneda!.id,
+          tipoCambio: widget.tipoCambio,
         );
 
         await _stockEmpresaService.createStockEmpresa(stock, widget.userId!);

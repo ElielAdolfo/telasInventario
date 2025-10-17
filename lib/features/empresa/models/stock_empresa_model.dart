@@ -4,15 +4,15 @@ class StockEmpresa {
   final String id;
   final String idEmpresa;
   final String idTipoProducto;
-  final String? idColor; // ID del color (opcional)
-  final double cantidad; // Cantidad por unidad (ej: 20 metros por rollo)
-  final int cantidadReservado; // Cantidad reservada en solicitudes pendientes
-  final int cantidadAprobado; // Cantidad aprobada para envío
-  final int unidades; // Número de unidades (ej: 50 rollos)
+  final String? idColor;
+  final double cantidad;
+  final int cantidadReservado;
+  final int cantidadAprobado;
+  final int unidades;
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
-  final double? precioPaquete; // Nuevo campo: precio por paquete
+  final double? precioPaquete;
   final DateTime fechaIngreso;
   final String? lote;
   final DateTime? fechaVencimiento;
@@ -35,9 +35,15 @@ class StockEmpresa {
   final String? createdBy;
   final String? updatedBy;
   final String? deletedBy;
+  final String? codigoUnico;
+
+  // ✅ NUEVOS CAMPOS
+  final String idMoneda;
+  final double tipoCambio;
+
   int get cantidadDisponible => unidades - cantidadReservado - cantidadAprobado;
   double get total => cantidad * unidades;
-  final String? codigoUnico;
+
   StockEmpresa({
     required this.id,
     required this.idEmpresa,
@@ -59,7 +65,6 @@ class StockEmpresa {
     this.deletedAt,
     required this.createdAt,
     required this.updatedAt,
-    // Campos adicionales copiados de TipoProducto
     required this.categoria,
     required this.nombre,
     required this.unidadMedida,
@@ -68,16 +73,17 @@ class StockEmpresa {
     required this.requiereColor,
     required this.cantidadesPosibles,
     required this.cantidadPrioritaria,
-    // Campos de auditoría
     this.createdBy,
     this.updatedBy,
     this.deletedBy,
     this.codigoUnico,
+
+    // ✅ Constructor actualizado
+    required this.idMoneda,
+    required this.tipoCambio,
   });
 
-  // Factory constructor para crear desde JSON
   factory StockEmpresa.fromJson(Map<String, dynamic> json, [String? id]) {
-    // Convertir la lista de cantidades desde JSON
     List<double> cantidadesPosibles = [];
     if (json['cantidadesPosibles'] != null) {
       for (var item in json['cantidadesPosibles']) {
@@ -116,7 +122,6 @@ class StockEmpresa {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : DateTime.now(),
-      // Campos adicionales copiados de TipoProducto
       categoria: json['categoria'] ?? '',
       nombre: json['nombre'] ?? '',
       unidadMedida: json['unidadMedida'] ?? '',
@@ -125,15 +130,17 @@ class StockEmpresa {
       requiereColor: json['requiereColor'] ?? false,
       cantidadesPosibles: cantidadesPosibles,
       cantidadPrioritaria: json['cantidadPrioritaria'] ?? 0,
-      // Campos de auditoría
       createdBy: json['createdBy'],
       updatedBy: json['updatedBy'],
       deletedBy: json['deletedBy'],
       codigoUnico: json['codigoUnico'],
+
+      // ✅ Nuevos campos
+      idMoneda: json['idMoneda'] ?? '',
+      tipoCambio: (json['tipoCambio'] ?? 1).toDouble(),
     );
   }
 
-  // Método para convertir a JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -156,7 +163,6 @@ class StockEmpresa {
       'deletedAt': deletedAt?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      // Campos adicionales copiados de TipoProducto
       'categoria': categoria,
       'nombre': nombre,
       'unidadMedida': unidadMedida,
@@ -167,15 +173,17 @@ class StockEmpresa {
           .map((e) => e.toString())
           .toList(),
       'cantidadPrioritaria': cantidadPrioritaria,
-      // Campos de auditoría
       'createdBy': createdBy,
       'updatedBy': updatedBy,
       'deletedBy': deletedBy,
       'codigoUnico': codigoUnico,
+
+      // ✅ Nuevos campos
+      'idMoneda': idMoneda,
+      'tipoCambio': tipoCambio,
     };
   }
 
-  // Método para crear una copia con algunos campos modificados
   StockEmpresa copyWith({
     String? id,
     String? idEmpresa,
@@ -209,6 +217,9 @@ class StockEmpresa {
     String? updatedBy,
     String? deletedBy,
     String? codigoUnico,
+    // ✅ Nuevos campos opcionales
+    String? idMoneda,
+    double? tipoCambio,
   }) {
     return StockEmpresa(
       id: id ?? this.id,
@@ -244,10 +255,13 @@ class StockEmpresa {
       updatedBy: updatedBy ?? this.updatedBy,
       deletedBy: deletedBy ?? this.deletedBy,
       codigoUnico: codigoUnico ?? this.codigoUnico,
+
+      // ✅ Nuevos campos
+      idMoneda: idMoneda ?? this.idMoneda,
+      tipoCambio: tipoCambio ?? this.tipoCambio,
     );
   }
 
-  // Factory constructor para crear una instancia vacía
   static StockEmpresa empty() {
     return StockEmpresa(
       id: '',
@@ -278,6 +292,10 @@ class StockEmpresa {
       updatedBy: null,
       deletedBy: null,
       codigoUnico: null,
+
+      // ✅ Nuevos campos
+      idMoneda: '',
+      tipoCambio: 1.0,
     );
   }
 
@@ -315,7 +333,9 @@ class StockEmpresa {
         'createdBy: $createdBy, '
         'updatedBy: $updatedBy, '
         'deletedBy: $deletedBy, '
-        'codigoUnico: $codigoUnico'
+        'codigoUnico: $codigoUnico, '
+        'idMoneda: $idMoneda, '
+        'tipoCambio: $tipoCambio'
         '}';
   }
 }
