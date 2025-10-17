@@ -1,9 +1,11 @@
 // lib/features/empresa/ui/empresa_list_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/models/empresa_model.dart';
 import 'package:inventario/features/empresa/ui/asignar_stock_tienda_screen.dart';
 import 'package:inventario/features/empresa/ui/color_list_screen.dart';
+import 'package:inventario/features/empresa/ui/moneda_list_screen.dart';
 import 'package:inventario/features/empresa/ui/profile_screen.dart';
 import 'package:inventario/features/empresa/ui/role_management_screen.dart';
 import 'package:inventario/features/empresa/ui/tipo_producto_selection_screen.dart';
@@ -14,7 +16,6 @@ import '../logic/empresa_manager.dart';
 import 'empresa_form_screen.dart';
 import 'empresa_dashboard_screen.dart';
 import 'deleted_empresas_screen.dart';
-
 import 'package:inventario/features/empresa/ui/agregar_stock_empresa_screen.dart';
 
 class EmpresaListScreen extends StatefulWidget {
@@ -25,6 +26,9 @@ class EmpresaListScreen extends StatefulWidget {
 }
 
 class _EmpresaListScreenState extends State<EmpresaListScreen> {
+  // Variable para controlar si el Speed Dial está abierto
+  bool _isDialOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -38,52 +42,7 @@ class _EmpresaListScreenState extends State<EmpresaListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Administración de Empresas'),
-        actions: [
-          Consumer<AuthManager>(
-            builder: (context, auth, child) {
-              return IconButton(
-                icon: CircleAvatar(
-                  radius: 14,
-                  backgroundImage: auth.user?.photoURL != null
-                      ? NetworkImage(auth.user!.photoURL!)
-                      : null,
-                  child: auth.user?.photoURL == null
-                      ? const Icon(Icons.person, size: 16)
-                      : null,
-                ),
-                onPressed: () => _navigateToProfile(context),
-                tooltip: 'Mi perfil',
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () => _navigateToRoleManagement(context),
-            tooltip: 'Gestionar roles',
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _navigateToForm(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () => _navigateToDeleted(context),
-            tooltip: 'Ver empresas eliminadas',
-          ),
-          IconButton(
-            icon: const Icon(Icons.straighten),
-            onPressed: () => _navigateToUnidadesMedida(context),
-            tooltip: 'Ver unidades de medida',
-          ),
-          IconButton(
-            icon: const Icon(Icons.palette),
-            onPressed: () => _navigateToColores(context),
-            tooltip: 'Gestionar colores',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Administración de Empresas')),
       body: Consumer<EmpresaManager>(
         builder: (context, manager, child) {
           if (manager.isLoading) {
@@ -178,13 +137,66 @@ class _EmpresaListScreenState extends State<EmpresaListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToForm(context),
-        child: const Icon(Icons.add),
+      // Reemplazamos el FloatingActionButton con un SpeedDial
+      floatingActionButton: SpeedDial(
+        icon: Icons.menu,
+        activeIcon: Icons.close,
+        spacing: 10,
+        spaceBetweenChildren: 10,
+        children: [
+          SpeedDialChild(
+            child: const Icon(Icons.person),
+            label: 'Mi perfil',
+            onTap: () => _navigateToProfile(context),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.admin_panel_settings),
+            label: 'Gestionar roles',
+            onTap: () => _navigateToRoleManagement(context),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.add),
+            label: 'Agregar empresa',
+            onTap: () => _navigateToForm(context),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.delete_outline),
+            label: 'Ver empresas eliminadas',
+            onTap: () => _navigateToDeleted(context),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.straighten),
+            label: 'Ver unidades de medida',
+            onTap: () => _navigateToUnidadesMedida(context),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.palette),
+            label: 'Gestionar colores',
+            onTap: () => _navigateToColores(context),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.people),
+            label: 'Administrar usuarios',
+            onTap: () => _navigateToUserManagement(context),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.monetization_on),
+            label: 'Gestionar monedas',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MonedaListScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 
+  // El resto de los métodos de navegación permanecen igual
   void _navigateToForm(BuildContext context, [Empresa? empresa]) {
     Navigator.push(
       context,

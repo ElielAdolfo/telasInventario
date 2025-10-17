@@ -4,6 +4,7 @@ import 'package:inventario/auth_gate.dart';
 import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/carrito_manager.dart';
 import 'package:inventario/features/empresa/logic/color_manager.dart';
+import 'package:inventario/features/empresa/logic/moneda_manager.dart';
 import 'package:inventario/features/empresa/logic/movimiento_stock_manager.dart';
 import 'package:inventario/features/empresa/logic/role_manager.dart';
 import 'package:inventario/features/empresa/logic/solicitud_traslado_manager.dart';
@@ -48,6 +49,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => VentaProductoManager()),
         ChangeNotifierProvider(create: (_) => UserManager()),
         ChangeNotifierProvider(create: (_) => RoleManager()),
+        ChangeNotifierProvider(create: (_) => MonedaManager()),
       ],
       child: MaterialApp(
         title: 'Sistema de Gestión de Empresas',
