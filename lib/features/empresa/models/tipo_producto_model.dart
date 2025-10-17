@@ -1,4 +1,3 @@
-// lib/features/producto/models/tipo_producto_model.dart
 class TipoProducto {
   final String id;
   final String idEmpresa;
@@ -62,7 +61,7 @@ class TipoProducto {
       descripcion: json['descripcion'],
       unidadMedida: json['unidadMedida'] ?? '',
       cantidadesPosibles: cantidades,
-      cantidadPrioritaria: json['cantidadPrioritaria'] ?? 0,
+      cantidadPrioritaria: (json['cantidadPrioritaria'] ?? 0).toDouble(),
       precioCompraDefault: (json['precioCompraDefault'] ?? 0).toDouble(),
       precioVentaDefaultMenor: (json['precioVentaDefaultMenor'] ?? 0)
           .toDouble(),

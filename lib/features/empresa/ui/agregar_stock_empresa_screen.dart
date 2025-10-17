@@ -319,7 +319,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
               ),
 
               const SizedBox(height: 16),
-
+              /*
               // Mostrar cantidades posibles si hay un producto seleccionado y permite venta parcial
               if (_tipoProductoSeleccionado != null &&
                   _tipoProductoSeleccionado!.permiteVentaParcial) ...[
@@ -524,6 +524,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                 const SizedBox(height: 16),
               ],
               // Campo Precio de Compra con validaciones
+              */
               Divider(),
 
               Text(
