@@ -29,8 +29,6 @@ class StockEmpresa {
   final String? unidadMedidaSecundaria;
   final bool permiteVentaParcial;
   final bool requiereColor;
-  final List<double> cantidadesPosibles;
-  final double cantidadPrioritaria;
 
   final String? createdBy;
   final String? updatedBy;
@@ -71,8 +69,6 @@ class StockEmpresa {
     required this.unidadMedidaSecundaria,
     required this.permiteVentaParcial,
     required this.requiereColor,
-    required this.cantidadesPosibles,
-    required this.cantidadPrioritaria,
     this.createdBy,
     this.updatedBy,
     this.deletedBy,
@@ -128,8 +124,6 @@ class StockEmpresa {
       unidadMedidaSecundaria: json['unidadMedidaSecundaria'],
       permiteVentaParcial: json['permiteVentaParcial'] ?? false,
       requiereColor: json['requiereColor'] ?? false,
-      cantidadesPosibles: cantidadesPosibles,
-      cantidadPrioritaria: json['cantidadPrioritaria'] ?? 0,
       createdBy: json['createdBy'],
       updatedBy: json['updatedBy'],
       deletedBy: json['deletedBy'],
@@ -169,10 +163,6 @@ class StockEmpresa {
       'unidadMedidaSecundaria': unidadMedidaSecundaria,
       'permiteVentaParcial': permiteVentaParcial,
       'requiereColor': requiereColor,
-      'cantidadesPosibles': cantidadesPosibles
-          .map((e) => e.toString())
-          .toList(),
-      'cantidadPrioritaria': cantidadPrioritaria,
       'createdBy': createdBy,
       'updatedBy': updatedBy,
       'deletedBy': deletedBy,
@@ -249,8 +239,6 @@ class StockEmpresa {
           unidadMedidaSecundaria ?? this.unidadMedidaSecundaria,
       permiteVentaParcial: permiteVentaParcial ?? this.permiteVentaParcial,
       requiereColor: requiereColor ?? this.requiereColor,
-      cantidadesPosibles: cantidadesPosibles ?? this.cantidadesPosibles,
-      cantidadPrioritaria: cantidadPrioritaria ?? this.cantidadPrioritaria,
       createdBy: createdBy ?? this.createdBy,
       updatedBy: updatedBy ?? this.updatedBy,
       deletedBy: deletedBy ?? this.deletedBy,
@@ -286,8 +274,6 @@ class StockEmpresa {
       unidadMedidaSecundaria: null,
       permiteVentaParcial: false,
       requiereColor: false,
-      cantidadesPosibles: [],
-      cantidadPrioritaria: 0,
       createdBy: null,
       updatedBy: null,
       deletedBy: null,
@@ -328,8 +314,6 @@ class StockEmpresa {
         'unidadMedidaSecundaria: $unidadMedidaSecundaria, '
         'permiteVentaParcial: $permiteVentaParcial, '
         'requiereColor: $requiereColor, '
-        'cantidadesPosibles: $cantidadesPosibles, '
-        'cantidadPrioritaria: $cantidadPrioritaria, '
         'createdBy: $createdBy, '
         'updatedBy: $updatedBy, '
         'deletedBy: $deletedBy, '

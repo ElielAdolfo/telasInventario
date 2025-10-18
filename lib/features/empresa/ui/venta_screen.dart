@@ -1150,6 +1150,8 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                 stockTienda.precioVentaMenor,
                 stockTienda.precioVentaMayor,
                 stockTienda.precioPaquete!,
+                stockTienda.idMoneda,
+                stockTienda.tipoCambio,
               );
 
               Navigator.pop(context); // cerrar el diálogo de confirmación

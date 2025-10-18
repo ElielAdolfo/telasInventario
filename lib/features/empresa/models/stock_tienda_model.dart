@@ -7,15 +7,15 @@ class StockTienda {
   final String? idTipoProducto;
   final String? idColor;
 
-  final int unidades; // Unidades enteras
-  final double cantidad; // Puede tener 2 decimales (nuevo campo)
+  final int unidades; 
+  final double cantidad;
   final double cantidadVendida;
-  final double cantidadAperturada; // Aperturado del stock
+  final double cantidadAperturada;
 
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
-  final double? precioPaquete; // Precio por paquete (opcional)
+  final double? precioPaquete;
 
   final DateTime fechaIngresoStock;
   final String? idSolicitudTraslado;
@@ -23,10 +23,8 @@ class StockTienda {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  // Nuevo campo
   final String? codigoUnico;
 
-  // Campos adicionales copiados de SolicitudTraslado
   final String categoria;
   final String nombre;
   final String unidadMedida;
@@ -38,6 +36,10 @@ class StockTienda {
   final String? colorNombre;
   final String? colorCodigo;
   final List<String> idsLotes;
+
+  // ✅ Campos nuevos
+  final String idMoneda;
+  final double tipoCambio;
 
   double get cantidadDisponible =>
       unidades - cantidadAperturada - cantidadVendida;
@@ -72,7 +74,9 @@ class StockTienda {
     required this.colorNombre,
     required this.colorCodigo,
     required this.idsLotes,
-    this.codigoUnico, // Nuevo campo agregado
+    this.codigoUnico,
+    required this.idMoneda,
+    required this.tipoCambio,
   });
 
   factory StockTienda.fromJson(Map<String, dynamic> json, String id) {
@@ -113,7 +117,9 @@ class StockTienda {
       colorNombre: json['colorNombre'],
       colorCodigo: json['colorCodigo'],
       idsLotes: idsLotes,
-      codigoUnico: json['codigoUnico'], // Nuevo campo agregado
+      codigoUnico: json['codigoUnico'],
+      idMoneda: json['idMoneda'] ?? '',
+      tipoCambio: (json['tipoCambio'] ?? 0).toDouble(),
     );
   }
 
@@ -147,7 +153,9 @@ class StockTienda {
       'colorNombre': colorNombre,
       'colorCodigo': colorCodigo,
       'idsLotes': idsLotes,
-      'codigoUnico': codigoUnico, // Nuevo campo agregado
+      'codigoUnico': codigoUnico,
+      'idMoneda': idMoneda,
+      'tipoCambio': tipoCambio,
     };
   }
 
@@ -181,7 +189,9 @@ class StockTienda {
     String? colorNombre,
     String? colorCodigo,
     List<String>? idsLotes,
-    String? codigoUnico, // Nuevo campo
+    String? codigoUnico,
+    String? idMoneda,
+    double? tipoCambio,
   }) {
     return StockTienda(
       id: id ?? this.id,
@@ -214,7 +224,9 @@ class StockTienda {
       colorNombre: colorNombre ?? this.colorNombre,
       colorCodigo: colorCodigo ?? this.colorCodigo,
       idsLotes: idsLotes ?? this.idsLotes,
-      codigoUnico: codigoUnico ?? this.codigoUnico, // Nuevo campo agregado
+      codigoUnico: codigoUnico ?? this.codigoUnico,
+      idMoneda: idMoneda ?? this.idMoneda,
+      tipoCambio: tipoCambio ?? this.tipoCambio,
     );
   }
 
@@ -249,7 +261,9 @@ class StockTienda {
       colorNombre: '',
       colorCodigo: '',
       idsLotes: const [],
-      codigoUnico: '', // Nuevo campo agregado
+      codigoUnico: '',
+      idMoneda: '',
+      tipoCambio: 0.0,
     );
   }
 
@@ -281,7 +295,9 @@ class StockTienda {
         'fechaVencimiento: $fechaVencimiento, '
         'colorNombre: $colorNombre, '
         'colorCodigo: $colorCodigo, '
-        'codigoUnico: $codigoUnico, ' // Nuevo campo
+        'codigoUnico: $codigoUnico, '
+        'idMoneda: $idMoneda, '
+        'tipoCambio: $tipoCambio, '
         'deleted: $deleted, '
         'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '

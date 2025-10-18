@@ -1,11 +1,12 @@
 class SolicitudTraslado {
+  // Identificación
   final String id;
   final String idEmpresa;
   final String idTienda;
   final String idStockOrigen;
   final String tipoSolicitud; // "EMPRESA_A_TIENDA" o "TIENDA_A_EMPRESA"
   final int cantidadSolicitada;
-  final double cantidad; // Nuevo campo: puede tener decimales
+  final double cantidad; // Puede tener decimales
   final String
   estado; // RESERVADO, APROBADO, RECHAZADO, EN_TRASLADO, RECIBIDO, DEVUELTO, CANCELADO
   final DateTime fechaSolicitud;
@@ -23,9 +24,13 @@ class SolicitudTraslado {
   final DateTime? fechaDevolucion;
   final DateTime? fechaRechazo;
   final String? correlativo;
-  final String? codigoUnico; // Nuevo campo agregado
+  final String? codigoUnico;
 
-  // Campos copiados de StockEmpresa para mantener un registro histórico
+  // Moneda y tipo de cambio
+  final String idMoneda;
+  final double tipoCambio;
+
+  // Campos copiados de StockEmpresa para mantener historial
   final String categoria;
   final String nombre;
   final String unidadMedida;
@@ -35,7 +40,7 @@ class SolicitudTraslado {
   final double precioCompra;
   final double precioVentaMenor;
   final double precioVentaMayor;
-  final double? precioPaquete; // Nuevo campo: precio por paquete
+  final double? precioPaquete;
   final String? lote;
   final DateTime? fechaVencimiento;
   final String? colorNombre;
@@ -45,7 +50,7 @@ class SolicitudTraslado {
   final String? idTipoProducto;
   final String? idColor;
 
-  // Campos de auditoría
+  // Auditoría
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -53,6 +58,7 @@ class SolicitudTraslado {
   final String? updatedBy;
   final String? deletedBy;
 
+  // Constructor
   SolicitudTraslado({
     required this.id,
     required this.idEmpresa,
@@ -60,11 +66,9 @@ class SolicitudTraslado {
     required this.idStockOrigen,
     required this.tipoSolicitud,
     required this.cantidadSolicitada,
-    required this.cantidad, // Nuevo campo
+    required this.cantidad,
     required this.estado,
     required this.fechaSolicitud,
-    this.correlativo,
-    this.codigoUnico, // Nuevo campo agregado
     this.idStockDestino,
     this.motivo,
     this.motivoRechazo,
@@ -78,25 +82,26 @@ class SolicitudTraslado {
     this.fechaRecepcion,
     this.fechaDevolucion,
     this.fechaRechazo,
-    // Campos copiados de StockEmpresa
+    this.correlativo,
+    this.codigoUnico,
+    required this.idMoneda,
+    required this.tipoCambio,
     required this.categoria,
     required this.nombre,
     required this.unidadMedida,
-    required this.unidadMedidaSecundaria,
+    this.unidadMedidaSecundaria,
     required this.permiteVentaParcial,
     required this.requiereColor,
     required this.precioCompra,
     required this.precioVentaMenor,
     required this.precioVentaMayor,
-    this.precioPaquete, // Nuevo campo
-    required this.lote,
-    required this.fechaVencimiento,
-    required this.colorNombre,
-    required this.colorCodigo,
-    // IDs para referencia
+    this.precioPaquete,
+    this.lote,
+    this.fechaVencimiento,
+    this.colorNombre,
+    this.colorCodigo,
     this.idTipoProducto,
     this.idColor,
-    // Campos de auditoría
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -105,6 +110,7 @@ class SolicitudTraslado {
     this.deletedBy,
   });
 
+  // fromJson
   factory SolicitudTraslado.fromJson(Map<String, dynamic> json, String id) {
     return SolicitudTraslado(
       id: id,
@@ -113,11 +119,9 @@ class SolicitudTraslado {
       idStockOrigen: json['idStockOrigen'] ?? '',
       tipoSolicitud: json['tipoSolicitud'] ?? '',
       cantidadSolicitada: json['cantidadSolicitada'] ?? 0,
-      cantidad: (json['cantidad'] ?? 0).toDouble(), // Nuevo campo
+      cantidad: (json['cantidad'] ?? 0).toDouble(),
       estado: json['estado'] ?? '',
       fechaSolicitud: DateTime.parse(json['fechaSolicitud']),
-      correlativo: json['correlativo'],
-      codigoUnico: json['codigoUnico'], // Nuevo campo agregado
       idStockDestino: json['idStockDestino'],
       motivo: json['motivo'],
       motivoRechazo: json['motivoRechazo'],
@@ -139,7 +143,10 @@ class SolicitudTraslado {
       fechaRechazo: json['fechaRechazo'] != null
           ? DateTime.parse(json['fechaRechazo'])
           : null,
-      // Campos copiados de StockEmpresa
+      correlativo: json['correlativo'],
+      codigoUnico: json['codigoUnico'],
+      idMoneda: json['idMoneda'] ?? '',
+      tipoCambio: (json['tipoCambio'] ?? 0).toDouble(),
       categoria: json['categoria'] ?? '',
       nombre: json['nombre'] ?? '',
       unidadMedida: json['unidadMedida'] ?? '',
@@ -149,17 +156,15 @@ class SolicitudTraslado {
       precioCompra: (json['precioCompra'] ?? 0).toDouble(),
       precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
       precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
-      precioPaquete: json['precioPaquete']?.toDouble(), // Nuevo campo
+      precioPaquete: json['precioPaquete']?.toDouble(),
       lote: json['lote'],
       fechaVencimiento: json['fechaVencimiento'] != null
           ? DateTime.parse(json['fechaVencimiento'])
           : null,
       colorNombre: json['colorNombre'],
       colorCodigo: json['colorCodigo'],
-      // IDs para referencia
       idTipoProducto: json['idTipoProducto'],
       idColor: json['idColor'],
-      // Campos de auditoría
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
@@ -175,6 +180,7 @@ class SolicitudTraslado {
     );
   }
 
+  // toJson
   Map<String, dynamic> toJson() {
     return {
       'idEmpresa': idEmpresa,
@@ -182,11 +188,9 @@ class SolicitudTraslado {
       'idStockOrigen': idStockOrigen,
       'tipoSolicitud': tipoSolicitud,
       'cantidadSolicitada': cantidadSolicitada,
-      'cantidad': cantidad, // Nuevo campo
+      'cantidad': cantidad,
       'estado': estado,
       'fechaSolicitud': fechaSolicitud.toIso8601String(),
-      'correlativo': correlativo,
-      'codigoUnico': codigoUnico, // Nuevo campo agregado
       'idStockDestino': idStockDestino,
       'motivo': motivo,
       'motivoRechazo': motivoRechazo,
@@ -200,7 +204,10 @@ class SolicitudTraslado {
       'fechaRecepcion': fechaRecepcion?.toIso8601String(),
       'fechaDevolucion': fechaDevolucion?.toIso8601String(),
       'fechaRechazo': fechaRechazo?.toIso8601String(),
-      // Campos copiados de StockEmpresa
+      'correlativo': correlativo,
+      'codigoUnico': codigoUnico,
+      'idMoneda': idMoneda,
+      'tipoCambio': tipoCambio,
       'categoria': categoria,
       'nombre': nombre,
       'unidadMedida': unidadMedida,
@@ -210,15 +217,13 @@ class SolicitudTraslado {
       'precioCompra': precioCompra,
       'precioVentaMenor': precioVentaMenor,
       'precioVentaMayor': precioVentaMayor,
-      'precioPaquete': precioPaquete, // Nuevo campo
+      'precioPaquete': precioPaquete,
       'lote': lote,
       'fechaVencimiento': fechaVencimiento?.toIso8601String(),
       'colorNombre': colorNombre,
       'colorCodigo': colorCodigo,
-      // IDs para referencia
       'idTipoProducto': idTipoProducto,
       'idColor': idColor,
-      // Campos de auditoría
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'deletedAt': deletedAt?.toIso8601String(),
@@ -228,6 +233,7 @@ class SolicitudTraslado {
     };
   }
 
+  // copyWith
   SolicitudTraslado copyWith({
     String? estado,
     String? idStockDestino,
@@ -244,8 +250,9 @@ class SolicitudTraslado {
     DateTime? fechaDevolucion,
     DateTime? fechaRechazo,
     String? correlativo,
-    String? codigoUnico, // Nuevo campo agregado
-    // Campos copiados de StockEmpresa
+    String? codigoUnico,
+    String? idMoneda,
+    double? tipoCambio,
     String? categoria,
     String? nombre,
     String? unidadMedida,
@@ -255,16 +262,14 @@ class SolicitudTraslado {
     double? precioCompra,
     double? precioVentaMenor,
     double? precioVentaMayor,
-    double? precioPaquete, 
-    double? cantidad, // Nuevo campo en copyWith
+    double? precioPaquete,
+    double? cantidad,
     String? lote,
     DateTime? fechaVencimiento,
     String? colorNombre,
     String? colorCodigo,
-    // IDs para referencia
     String? idTipoProducto,
     String? idColor,
-    // Campos de auditoría
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? deletedAt,
@@ -279,18 +284,15 @@ class SolicitudTraslado {
       idStockOrigen: idStockOrigen,
       tipoSolicitud: tipoSolicitud,
       cantidadSolicitada: cantidadSolicitada,
-      cantidad: cantidad ?? this.cantidad, // Nuevo campo
+      cantidad: cantidad ?? this.cantidad,
       estado: estado ?? this.estado,
       fechaSolicitud: fechaSolicitud ?? this.fechaSolicitud,
-      correlativo: correlativo ?? this.correlativo,
-      codigoUnico: codigoUnico ?? this.codigoUnico, // Nuevo campo agregado
       idStockDestino: idStockDestino ?? this.idStockDestino,
       motivo: motivo ?? this.motivo,
       motivoRechazo: motivoRechazo ?? this.motivoRechazo,
       observacionesRecepcion:
           observacionesRecepcion ?? this.observacionesRecepcion,
       motivoDevolucion: motivoDevolucion ?? this.motivoDevolucion,
-      solicitadoPor: solicitadoPor,
       aprobadoPor: aprobadoPor ?? this.aprobadoPor,
       recibidoPor: recibidoPor ?? this.recibidoPor,
       devueltoPor: devueltoPor ?? this.devueltoPor,
@@ -298,7 +300,10 @@ class SolicitudTraslado {
       fechaRecepcion: fechaRecepcion ?? this.fechaRecepcion,
       fechaDevolucion: fechaDevolucion ?? this.fechaDevolucion,
       fechaRechazo: fechaRechazo ?? this.fechaRechazo,
-      // Campos copiados de StockEmpresa
+      correlativo: correlativo ?? this.correlativo,
+      codigoUnico: codigoUnico ?? this.codigoUnico,
+      idMoneda: idMoneda ?? this.idMoneda,
+      tipoCambio: tipoCambio ?? this.tipoCambio,
       categoria: categoria ?? this.categoria,
       nombre: nombre ?? this.nombre,
       unidadMedida: unidadMedida ?? this.unidadMedida,
@@ -309,15 +314,13 @@ class SolicitudTraslado {
       precioCompra: precioCompra ?? this.precioCompra,
       precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
       precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
-      precioPaquete: precioPaquete ?? this.precioPaquete, // Nuevo campo
+      precioPaquete: precioPaquete ?? this.precioPaquete,
       lote: lote ?? this.lote,
       fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
       colorNombre: colorNombre ?? this.colorNombre,
       colorCodigo: colorCodigo ?? this.colorCodigo,
-      // IDs para referencia
       idTipoProducto: idTipoProducto ?? this.idTipoProducto,
       idColor: idColor ?? this.idColor,
-      // Campos de auditoría
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -327,6 +330,7 @@ class SolicitudTraslado {
     );
   }
 
+  // empty
   factory SolicitudTraslado.empty() {
     return SolicitudTraslado(
       id: '',
@@ -338,8 +342,6 @@ class SolicitudTraslado {
       cantidad: 0.0,
       estado: '',
       fechaSolicitud: DateTime.now(),
-      correlativo: '',
-      codigoUnico: '',
       idStockDestino: null,
       motivo: null,
       motivoRechazo: null,
@@ -353,7 +355,10 @@ class SolicitudTraslado {
       fechaRecepcion: null,
       fechaDevolucion: null,
       fechaRechazo: null,
-      // Campos copiados de StockEmpresa
+      correlativo: null,
+      codigoUnico: null,
+      idMoneda: 'USD',
+      tipoCambio: 1.0,
       categoria: '',
       nombre: '',
       unidadMedida: '',
@@ -368,10 +373,8 @@ class SolicitudTraslado {
       fechaVencimiento: null,
       colorNombre: null,
       colorCodigo: null,
-      // IDs para referencia
       idTipoProducto: null,
       idColor: null,
-      // Campos de auditoría
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       deletedAt: null,

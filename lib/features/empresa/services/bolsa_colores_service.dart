@@ -56,8 +56,6 @@ class BolsaColoresService extends BaseService {
         unidadMedidaSecundaria: unidadMedidaSecundaria,
         permiteVentaParcial: permiteVentaParcial,
         requiereColor: requiereColor,
-        cantidadesPosibles: cantidadesPosibles,
-        cantidadPrioritaria: cantidadPrioritaria,
         createdBy: userId,
         updatedBy: userId,
         deletedBy: null,

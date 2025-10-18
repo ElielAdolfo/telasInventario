@@ -19,11 +19,15 @@ class StockLoteTienda {
   final String idTienda;
   final String? idColor;
 
-  // ✅ Nuevos campos de precios
+  // ✅ Campos de precios
   final double? precioCompra;
   final double? precioVentaMenor;
   final double? precioVentaMayor;
   final double? precioPaquete;
+
+  // ✅ Nuevos campos agregados
+  final String idMoneda;
+  final double tipoCambio;
 
   StockLoteTienda({
     required this.id,
@@ -47,6 +51,8 @@ class StockLoteTienda {
     this.precioVentaMenor,
     this.precioVentaMayor,
     this.precioPaquete,
+    required this.idMoneda,
+    required this.tipoCambio,
   });
 
   double get cantidadDisponible => cantidad - cantidadVendida;
@@ -76,6 +82,8 @@ class StockLoteTienda {
       precioVentaMenor: (json['precioVentaMenor'] ?? 0).toDouble(),
       precioVentaMayor: (json['precioVentaMayor'] ?? 0).toDouble(),
       precioPaquete: (json['precioPaquete'] ?? 0).toDouble(),
+      idMoneda: json['idMoneda'] ?? '',
+      tipoCambio: (json['tipoCambio'] ?? 0).toDouble(),
     );
   }
 
@@ -101,6 +109,8 @@ class StockLoteTienda {
       'precioVentaMenor': precioVentaMenor,
       'precioVentaMayor': precioVentaMayor,
       'precioPaquete': precioPaquete,
+      'idMoneda': idMoneda,
+      'tipoCambio': tipoCambio,
     };
   }
 
@@ -126,6 +136,8 @@ class StockLoteTienda {
     double? precioVentaMenor,
     double? precioVentaMayor,
     double? precioPaquete,
+    String? idMoneda,
+    double? tipoCambio,
   }) {
     return StockLoteTienda(
       id: id ?? this.id,
@@ -149,6 +161,28 @@ class StockLoteTienda {
       precioVentaMenor: precioVentaMenor ?? this.precioVentaMenor,
       precioVentaMayor: precioVentaMayor ?? this.precioVentaMayor,
       precioPaquete: precioPaquete ?? this.precioPaquete,
+      idMoneda: idMoneda ?? this.idMoneda,
+      tipoCambio: tipoCambio ?? this.tipoCambio,
+    );
+  }
+
+  static StockLoteTienda empty() {
+    return StockLoteTienda(
+      id: '',
+      idStockTienda: '',
+      cantidad: 0,
+      cantidadVendida: 0,
+      fechaApertura: DateTime.now(),
+      abiertoPor: '',
+      estaCerrada: false,
+      deleted: false,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      idTipoProducto: '',
+      idEmpresa: '',
+      idTienda: '',
+      idMoneda: '',
+      tipoCambio: 0,
     );
   }
 
@@ -176,7 +210,9 @@ class StockLoteTienda {
         'precioCompra: $precioCompra, '
         'precioVentaMenor: $precioVentaMenor, '
         'precioVentaMayor: $precioVentaMayor, '
-        'precioPaquete: $precioPaquete'
+        'precioPaquete: $precioPaquete, '
+        'idMoneda: $idMoneda, '
+        'tipoCambio: $tipoCambio'
         ')';
   }
 }

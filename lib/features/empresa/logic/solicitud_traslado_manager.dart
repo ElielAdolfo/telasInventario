@@ -269,7 +269,6 @@ class SolicitudTrasladoManager with ChangeNotifier {
 
     try {
       final solicitud = await _service.getSolicitudById(idSolicitud);
-      print("solicitud: " + solicitud.toString());
       if (solicitud == null) {
         _error = 'No se encontró la solicitud';
         _isLoading = false;
@@ -363,6 +362,8 @@ class SolicitudTrasladoManager with ChangeNotifier {
         idsLotes: [],
         cantidadAperturada: 0,
         codigoUnico: solicitud.codigoUnico,
+        idMoneda: solicitud.idMoneda,
+        tipoCambio: solicitud.tipoCambio,
       );
 
       final idStockTienda = await _stockTiendaService.createStockTienda(

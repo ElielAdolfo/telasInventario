@@ -452,7 +452,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
                               textColor: colorTexto,
                             ),
                             _buildTableCell(
-                              '',
+                              'Añadir',
                               isButton: true,
                               onPressed: stock.cantidadDisponible > 0
                                   ? () => _agregarProductoALista(stock)
@@ -575,7 +575,7 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
             backgroundColor: color ?? Colors.blue,
             minimumSize: const Size(80, 36),
           ),
-          child: Text(text),
+          child: Text(text, style: const TextStyle(color: Colors.white)),
         ),
       );
     }
@@ -791,6 +791,8 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           updatedBy: _userId,
           deletedAt: null,
           deletedBy: null,
+          idMoneda: stock.idMoneda,
+          tipoCambio: stock.tipoCambio,
         );
 
         final resultado = await context

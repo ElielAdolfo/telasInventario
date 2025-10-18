@@ -240,9 +240,6 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
           unidadMedidaSecundaria: widget.tipoProducto.unidadMedidaSecundaria,
           permiteVentaParcial: widget.tipoProducto.permiteVentaParcial,
           requiereColor: widget.tipoProducto.requiereColor,
-          cantidadesPosibles: widget.tipoProducto.cantidadesPosibles
-              .cast<double>(),
-          cantidadPrioritaria: widget.tipoProducto.cantidadPrioritaria,
           createdBy: widget.userId,
           updatedBy: widget.userId,
           deletedBy: null,

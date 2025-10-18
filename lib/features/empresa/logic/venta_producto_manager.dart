@@ -492,6 +492,8 @@ class VentaProductoManager extends ChangeNotifier {
     double precioVentaMenor,
     double precioVentaMayor,
     double precioPaquete,
+    String idMoneda,
+    double tipoCambio,
   ) async {
     try {
       // Obtener el stock de tienda actualizado
@@ -533,6 +535,8 @@ class VentaProductoManager extends ChangeNotifier {
           precioPaquete: precioPaquete,
           precioVentaMayor: precioVentaMayor,
           precioVentaMenor: precioVentaMenor,
+          idMoneda: idMoneda,
+          tipoCambio: tipoCambio,
         );
 
         // Registrar el nuevo lote
