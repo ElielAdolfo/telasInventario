@@ -92,7 +92,7 @@ class StockEmpresa {
       idEmpresa: json['idEmpresa'] ?? '',
       idTipoProducto: json['idTipoProducto'] ?? '',
       idColor: json['idColor'],
-      cantidad: json['cantidad'] ?? 0,
+      cantidad: (json['cantidad'] ?? 0).toDouble(),
       cantidadReservado: json['cantidadReservado'] ?? 0,
       cantidadAprobado: json['cantidadAprobado'] ?? 0,
       unidades: json['unidades'] ?? 0,
