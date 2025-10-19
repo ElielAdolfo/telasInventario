@@ -1,0 +1,6 @@
+se esta conectando para enviar correos a
+https://vercel.com/correos-projects-34275b98/enviar-correo/3zUoXXU7yZqNSnGfakZ7i6Qi3XYW
+con el git de joel
+postman para probar 
+https://www.postman.com/red-sunset-8653/correo/request/c61fnu5/new-request?tab=body
+con el correo de eliel.adolfo
