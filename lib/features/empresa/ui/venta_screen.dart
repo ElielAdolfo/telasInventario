@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:inventario/auth_manager.dart';
+import 'package:inventario/features/empresa/logic/jornada_manager.dart';
 import 'package:inventario/features/empresa/models/carrito_item_model.dart';
+import 'package:inventario/features/empresa/models/jornada_model.dart';
 import 'package:provider/provider.dart';
 import '../logic/venta_producto_manager.dart';
 import '../logic/carrito_manager.dart';
@@ -22,8 +24,18 @@ class VentaScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => VentaProductoManager()),
-        ChangeNotifierProvider(create: (_) => CarritoManager()),
+        ChangeNotifierProvider(
+          create: (_) => VentaProductoManager(),
+          lazy: true, // Agregar lazy initialization
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CarritoManager(),
+          lazy: true, // Agregar lazy initialization
+        ),
+        ChangeNotifierProvider(
+          create: (_) => JornadaManager(),
+          lazy: true, // Agregar lazy initialization
+        ),
       ],
       child: _VentaScreenContent(empresaId: empresaId, tienda: tienda),
     );
@@ -46,28 +58,209 @@ class _VentaScreenContent extends StatefulWidget {
 
 class __VentaScreenContentState extends State<_VentaScreenContent> {
   late final String? _userId;
+  bool _jornadaVerificada = false;
+  bool _tieneJornadaAbierta = false;
+  Jornada? _jornadaActual;
+
   @override
   void initState() {
     super.initState();
     final authManager = Provider.of<AuthManager>(context, listen: false);
     _userId = authManager.userId;
-    // Cargar datos iniciales
+
+    // Usar addPostFrameCallback para asegurar que el widget esté completamente construido
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<VentaProductoManager>().cargarDatosIniciales(
-        widget.tienda.id,
-      );
+      if (mounted) {
+        _verificarJornada();
+      }
     });
   }
 
   @override
+  void dispose() {
+    // Cancelar cualquier operación asíncrona pendiente
+    // y limpiar recursos para evitar memory leaks
+    super.dispose();
+  }
+
+  Future<void> _verificarJornada() async {
+    // Verificar si el widget todavía está montado
+    if (!mounted) return;
+
+    final jornadaManager = Provider.of<JornadaManager>(context, listen: false);
+
+    // Obtener fecha actual sin hora
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+
+    // Verificar si el usuario tiene jornada abierta
+    final tieneJornada = await jornadaManager.verificarJornadaAbierta(
+      widget.tienda.id,
+      _userId ?? '',
+    );
+
+    // Verificar nuevamente si el widget está montado después de la operación asíncrona
+    if (!mounted) return;
+
+    if (tieneJornada) {
+      // Verificar si la jornada abierta es del día actual
+      final jornadaEsDeHoy = await jornadaManager.verificarJornadaEsFechaActual(
+        widget.tienda.id,
+        _userId ?? '',
+        hoy,
+      );
+
+      // Verificar nuevamente si el widget está montado
+      if (!mounted) return;
+
+      if (!jornadaEsDeHoy) {
+        // Usar setState solo si el widget sigue montado
+        if (mounted) {
+          setState(() {
+            _jornadaVerificada = true;
+            _tieneJornadaAbierta = false;
+          });
+        }
+
+        // Verificar nuevamente antes de mostrar el diálogo
+        if (!mounted) return;
+
+        // Mostrar un diálogo indicando que la jornada no es del día actual
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Text('Jornada de día anterior'),
+            content: Text(
+              'La jornada del día ${_formatFecha(jornadaManager.jornadaActual?.fechaApertura)} no fue cerrada. '
+              'Debe cerrar la jornada anterior antes de poder continuar.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Regresar a la pantalla anterior
+                  Navigator.pop(context);
+                },
+                child: Text('Entendido'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context); // Cerrar el diálogo actual
+
+                  // Mostrar diálogo de confirmación para cerrar la jornada
+                  _mostrarDialogoCerrarJornadaAnterior(context, jornadaManager);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: Text('Cerrar Jornada'),
+              ),
+            ],
+          ),
+        );
+
+        return;
+      }
+    }
+
+    // Si llegamos aquí, no hay jornada abierta de días anteriores
+    // Continuar con la lógica normal
+
+    // Cargar el último tipo de cambio
+    await jornadaManager.cargarUltimoTipoCambio();
+
+    // Verificar nuevamente si el widget está montado
+    if (!mounted) return;
+
+    // Usar setState solo si el widget sigue montado
+    if (mounted) {
+      setState(() {
+        _tieneJornadaAbierta = tieneJornada;
+        _jornadaActual = jornadaManager.jornadaActual;
+        _jornadaVerificada = true;
+      });
+    }
+
+    // Si tiene jornada abierta, cargar los datos iniciales
+    if (_tieneJornadaAbierta) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Verificar una última vez antes de acceder al context
+        if (mounted) {
+          context.read<VentaProductoManager>().cargarDatosIniciales(
+            widget.tienda.id,
+          );
+        }
+      });
+    }
+  }
+
+  // Método auxiliar para formatear fecha
+  String _formatFecha(DateTime? fecha) {
+    if (fecha == null) return '';
+    return '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}';
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(appBar: _buildAppBar(context), body: _buildBody(context));
+    // Si aún no se ha verificado la jornada, mostrar un indicador de carga
+    if (!_jornadaVerificada) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Ventas - ${widget.tienda.nombre}')),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Si no tiene jornada abierta, mostrar el diálogo para abrir jornada
+    if (!_tieneJornadaAbierta) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Ventas - ${widget.tienda.nombre}')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'No tienes una jornada abierta',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => _mostrarDialogoAbrirJornada(context),
+                child: Text('Abrir Jornada'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Si tiene jornada abierta, mostrar la pantalla de venta normal
+    return Scaffold(
+      appBar: _buildAppBar(context),
+      body: _buildBody(context),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _mostrarDialogoCerrarJornada(context),
+        child: Icon(Icons.lock),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       title: Text('Ventas - ${widget.tienda.nombre}'),
-      actions: [_buildCartButton(context)],
+      actions: [
+        // Mostrar información de la jornada actual
+        Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: Center(
+            child: Text(
+              'Jornada abierta\nTC: ${_jornadaActual?.tipoCambioDolar.toStringAsFixed(2) ?? '0.00'}',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+        ),
+        _buildCartButton(context),
+      ],
     );
   }
 
@@ -256,6 +449,34 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
   }
 
   void _mostrarModalVenta(BuildContext context, StockTienda stock) {
+    // Verificar si la jornada es del día actual
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+
+    if (_jornadaActual != null &&
+        (_jornadaActual!.fechaApertura.year != hoy.year ||
+            _jornadaActual!.fechaApertura.month != hoy.month ||
+            _jornadaActual!.fechaApertura.day != hoy.day)) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Jornada de día anterior'),
+          content: Text(
+            'La jornada actual corresponde al día ${_formatFecha(_jornadaActual!.fechaApertura)} '
+            'y no puede ser utilizada para ventas hoy. Debe cerrar la jornada anterior y abrir una nueva.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Si la jornada es del día actual, continuar con el flujo normal
     final manager = context.read<VentaProductoManager>();
     final futureLotes = manager.getLotesPorProductoColor(
       stock.nombre,
@@ -1318,5 +1539,324 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     } catch (e) {
       return Colors.grey;
     }
+  }
+
+  void _mostrarDialogoAbrirJornada(BuildContext context) {
+    // Verificar si el widget está montado antes de mostrar el diálogo
+    if (!mounted) return;
+
+    final jornadaManager = Provider.of<JornadaManager>(context, listen: false);
+    final TextEditingController tipoCambioController = TextEditingController(
+      text: jornadaManager.ultimoTipoCambio > 0
+          ? jornadaManager.ultimoTipoCambio.toString()
+          : '',
+    );
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Abrir Jornada'),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Para comenzar a vender, debes abrir una jornada. Recuerda que solo puedes abrir una jornada por día.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Ingresa el tipo de cambio del dólar para hoy:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: tipoCambioController,
+                  decoration: InputDecoration(
+                    labelText: 'Tipo de cambio (USD a BOB)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.attach_money),
+                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Ingrese el tipo de cambio';
+                    }
+                    final tipoCambio = double.tryParse(value);
+                    if (tipoCambio == null || tipoCambio <= 0) {
+                      return 'Ingrese un tipo de cambio válido';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                final tipoCambio = double.parse(tipoCambioController.text);
+
+                // Abrir jornada
+                final resultado = await jornadaManager.abrirJornada(
+                  idTienda: widget.tienda.id,
+                  idUsuario: _userId ?? '',
+                  tipoCambioDolar: tipoCambio,
+                );
+
+                Navigator.pop(context);
+
+                // Verificar si el widget sigue montado después de cerrar el diálogo
+                if (!mounted) return;
+
+                if (resultado) {
+                  // Recargar la pantalla
+                  if (mounted) {
+                    setState(() {
+                      _tieneJornadaAbierta = true;
+                      _jornadaActual = jornadaManager.jornadaActual;
+                    });
+                  }
+
+                  // Cargar datos iniciales
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      context.read<VentaProductoManager>().cargarDatosIniciales(
+                        widget.tienda.id,
+                      );
+                    }
+                  });
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Jornada abierta correctamente'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: ${jornadaManager.error}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+            child: Text('Abrir Jornada'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarDialogoCerrarJornada(BuildContext context) {
+    // Verificar si el widget está montado antes de mostrar el diálogo
+    if (!mounted) return;
+
+    final jornadaManager = Provider.of<JornadaManager>(context, listen: false);
+
+    // Verificar si la jornada es del día actual
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+
+    // Si la jornada no es del día actual, mostrar advertencia
+    if (_jornadaActual != null &&
+        (_jornadaActual!.fechaApertura.year != hoy.year ||
+            _jornadaActual!.fechaApertura.month != hoy.month ||
+            _jornadaActual!.fechaApertura.day != hoy.day)) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Jornada de día anterior'),
+          content: Text(
+            'Esta jornada corresponde al día ${_formatFecha(_jornadaActual!.fechaApertura)} '
+            'y no puede ser cerrada hoy. Debe cerrar las jornadas el mismo día que se abren.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Guardar una referencia al ScaffoldMessenger antes de mostrar el diálogo
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Cerrar Jornada'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '¿Estás seguro que deseas cerrar la jornada actual?',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 16),
+            if (_jornadaActual != null)
+              Text(
+                'Tipo de cambio: ${_jornadaActual!.tipoCambioDolar.toStringAsFixed(2)}',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context); // Cerrar el diálogo primero
+
+              // Cerrar jornada
+              final resultado = await jornadaManager.cerrarJornada(
+                _userId ?? '',
+              );
+
+              // Verificar si el widget sigue montado después de la operación asíncrona
+              if (!mounted) return;
+
+              if (resultado) {
+                // Recargar la pantalla
+                if (mounted) {
+                  setState(() {
+                    _tieneJornadaAbierta = false;
+                    _jornadaActual = null;
+                  });
+                }
+
+                // Usar la referencia guardada en lugar de intentar obtener un nuevo contexto
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Jornada cerrada correctamente'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } else {
+                // Usar la referencia guardada en lugar de intentar obtener un nuevo contexto
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${jornadaManager.error}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Cerrar Jornada'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Agregar nuevo método para mostrar el diálogo de cierre de jornada anterior
+  void _mostrarDialogoCerrarJornadaAnterior(
+    BuildContext context,
+    JornadaManager jornadaManager,
+  ) {
+    // Guardar una referencia al ScaffoldMessenger antes de mostrar el diálogo
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Cerrar Jornada Anterior'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '¿Está seguro que desea cerrar la jornada del día ${_formatFecha(jornadaManager.jornadaActual?.fechaApertura)}?',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 16),
+            if (jornadaManager.jornadaActual != null)
+              Text(
+                'Tipo de cambio: ${jornadaManager.jornadaActual!.tipoCambioDolar.toStringAsFixed(2)}',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            SizedBox(height: 8),
+            Text(
+              'Una vez cerrada, no podrá realizar más ventas con esta jornada.',
+              style: TextStyle(color: Colors.red),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context); // Cerrar el diálogo primero
+
+              // Cerrar jornada
+              final resultado = await jornadaManager.cerrarJornada(
+                _userId ?? '',
+              );
+
+              // Verificar si el widget sigue montado después de la operación asíncrona
+              if (!mounted) return;
+
+              if (resultado) {
+                // Mostrar mensaje de éxito
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Jornada cerrada correctamente'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+
+                // Esperar un momento y luego recargar la pantalla
+                Future.delayed(Duration(seconds: 1), () {
+                  if (mounted) {
+                    _verificarJornada(); // Recargar la verificación de jornada
+                  }
+                });
+              } else {
+                // Mostrar mensaje de error
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${jornadaManager.error}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Cerrar Jornada'),
+          ),
+        ],
+      ),
+    );
   }
 }

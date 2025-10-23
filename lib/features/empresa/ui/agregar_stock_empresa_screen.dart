@@ -36,7 +36,6 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
   final _precioVentaMenorController = TextEditingController();
   final _precioVentaMayorController = TextEditingController();
   final _precioPaqueteController = TextEditingController();
-  final _loteController = TextEditingController();
   final _observacionesController = TextEditingController();
   final _fechaVencimientoController = TextEditingController();
   late final TextEditingController _cantidadPrioritariaController;
@@ -98,7 +97,6 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     _precioVentaMenorController.dispose();
     _precioVentaMayorController.dispose();
     _precioPaqueteController.dispose();
-    _loteController.dispose();
     _observacionesController.dispose();
     _fechaVencimientoController.dispose();
     _cantidadPrioritariaController.dispose();
@@ -189,7 +187,6 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
           tipoProducto: _tipoProductoSeleccionado!,
           coloresSeleccionados: _coloresSeleccionados,
           userId: userId,
-          lote: _loteController.text.isNotEmpty ? _loteController.text : null,
           fechaVencimiento: _fechaVencimiento,
           observaciones: _observacionesController.text.isNotEmpty
               ? _observacionesController.text
@@ -250,7 +247,6 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
           precioVentaMenor: precioVentaMenor,
           precioVentaMayor: precioVentaMayor,
           precioPaquete: precioPaquete,
-          lote: _loteController.text.isNotEmpty ? _loteController.text : null,
           fechaVencimiento: _fechaVencimiento,
           observaciones: _observacionesController.text.isNotEmpty
               ? _observacionesController.text
@@ -481,7 +477,9 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.straighten),
                         ),
-                        keyboardType: TextInputType.number,
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         onChanged: (value) {
                           final cantidad = double.tryParse(value) ?? 1;
                           setState(() {
@@ -492,7 +490,7 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Ingrese la cantidad por ${_tipoProductoSeleccionado!.unidadMedida}';
                           }
-                          final cantidad = int.tryParse(value);
+                          final cantidad = double.tryParse(value);
                           if (cantidad == null || cantidad <= 0) {
                             return 'Ingrese una cantidad válida';
                           }
@@ -798,18 +796,6 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
               const SizedBox(height: 16),
 
-              // Lote
-              TextFormField(
-                controller: _loteController,
-                decoration: const InputDecoration(
-                  labelText: 'Lote (Opcional)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.tag),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
               // Fecha de vencimiento
               TextFormField(
                 controller: _fechaVencimientoController,
@@ -1089,23 +1075,78 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         children: [
-          // Encabezado con color y botón de eliminar
-          ListTile(
-            leading: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: _parseColor(widget.entrada.color.codigoColor),
-                shape: BoxShape.circle,
-              ),
-            ),
-            title: Text(widget.entrada.color.nombreColor),
-            subtitle: Text(
-              '${widget.entrada.unidades} Unidade(s) contiene ${widget.entrada.cantidad} Metro(s)',
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+          // Encabezado con color, lote y botón de eliminar (corregido)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // Círculo de color
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: _parseColor(widget.entrada.color.codigoColor),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Nombre del color y detalle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.entrada.color.nombreColor,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 20), // ← Espacio solicitado
+                      Text(
+                        '${widget.entrada.unidades} Unidade(s) contiene ${widget.entrada.cantidad} Metro(s)',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Campo de lote y botón de eliminar
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      height: 36,
+                      child: TextField(
+                        controller: _loteController,
+                        decoration: const InputDecoration(
+                          hintText: 'Lote',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (_) => _actualizarEntrada(),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: widget.onRemove,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Eliminar entrada',
+                    ),
+                  ],
+                ),
+
+                const SizedBox(width: 8),
+
+                // Botón expandir/colapsar
                 IconButton(
                   icon: Icon(
                     _expandido ? Icons.expand_less : Icons.expand_more,
@@ -1116,10 +1157,6 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                     });
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: widget.onRemove,
-                ),
               ],
             ),
           ),
@@ -1127,28 +1164,10 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
           // Mostrar información básica incluso cuando no está expandido
           if (!_expandido)
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (widget.entrada.lote != null &&
-                      widget.entrada.lote!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4.0),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.tag, size: 16, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Lote: ${widget.entrada.lote}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
                   if (widget.entrada.fechaVencimiento != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4.0),
@@ -1201,11 +1220,12 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                           controller: _cantidadController,
                           decoration: InputDecoration(
                             labelText: 'Cantidad por ${widget.unidadMedida}',
-                            border: OutlineInputBorder(),
+                            border: const OutlineInputBorder(),
                           ),
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           onChanged: (value) {
-                            // Actualizar la cantidad prioritaria cuando cambie el valor
                             final cantidad = double.tryParse(value) ?? 1;
                             setState(() {
                               _cantidadPrioritaria = cantidad;
@@ -1220,12 +1240,10 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                         children: [
                           InkWell(
                             onTap: () {
-                              final cantidad =
-                                  int.tryParse(_cantidadController.text) ?? 1;
-                              _cantidadController.text = (cantidad + 1)
-                                  .toString();
+                              final cantidad = _cantidadPrioritaria + 1;
                               setState(() {
-                                _cantidadPrioritaria = cantidad + 1;
+                                _cantidadPrioritaria = cantidad;
+                                _cantidadController.text = cantidad.toString();
                               });
                               _actualizarEntrada();
                             },
@@ -1245,13 +1263,12 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                           const SizedBox(height: 4),
                           InkWell(
                             onTap: () {
-                              final cantidad =
-                                  int.tryParse(_cantidadController.text) ?? 1;
-                              if (cantidad > 1) {
-                                _cantidadController.text = (cantidad - 1)
-                                    .toString();
+                              if (_cantidadPrioritaria > 1) {
+                                final cantidad = _cantidadPrioritaria - 1;
                                 setState(() {
-                                  _cantidadPrioritaria = cantidad - 1;
+                                  _cantidadPrioritaria = cantidad;
+                                  _cantidadController.text = cantidad
+                                      .toString();
                                 });
                                 _actualizarEntrada();
                               }
@@ -1326,7 +1343,7 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                       labelText: 'De Compra',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: TextInputType.numberWithOptions(
+                    keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
                     onChanged: (_) => _actualizarEntrada(),
@@ -1338,7 +1355,7 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                       labelText: 'Por Rollo',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: TextInputType.numberWithOptions(
+                    keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
                     onChanged: (_) => _actualizarEntrada(),
@@ -1350,7 +1367,7 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                       labelText: 'Por Mayor',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: TextInputType.numberWithOptions(
+                    keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
                     onChanged: (_) => _actualizarEntrada(),
@@ -1362,19 +1379,8 @@ class __EntradaColorWidgetState extends State<_EntradaColorWidget> {
                       labelText: 'Por Menor',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: TextInputType.numberWithOptions(
+                    keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
-                    ),
-                    onChanged: (_) => _actualizarEntrada(),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Campo de lote
-                  TextFormField(
-                    controller: _loteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Lote',
-                      border: OutlineInputBorder(),
                     ),
                     onChanged: (_) => _actualizarEntrada(),
                   ),

@@ -60,6 +60,7 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
 
   // Controladores para los campos editables
   final Map<String, TextEditingController> _metrajeControllers = {};
+  final Map<String, TextEditingController> _loteControllers = {};
 
   // Último código utilizado
   String _ultimoCodigo = 'A-0000';
@@ -79,15 +80,16 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
     for (var controller in _metrajeControllers.values) {
       controller.dispose();
     }
+    for (var controller in _loteControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   // Cargar el último código utilizado desde la base de datos
   Future<void> _cargarUltimoCodigo() async {
     try {
-      // Primero intentar obtener el último código de la tabla codigos_stock
       final ultimoCodigo = await _codigoService.obtenerUltimoCodigo();
-      //asta aqui llego correctamente nos devolvio el ultimo codigo: A-0005
       print("nos devolvio el ultimo codigo: " + ultimoCodigo.toString());
 
       if (ultimoCodigo != null) {
@@ -95,14 +97,12 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
           _ultimoCodigo = ultimoCodigo;
         });
       } else {
-        // Si no hay ningún código, usar el valor por defecto
         setState(() {
           _ultimoCodigo = 'A-0000';
         });
       }
     } catch (e) {
       print("Error al cargar último código: $e");
-      // En caso de error, usar el valor por defecto
       setState(() {
         _ultimoCodigo = 'A-0000';
       });
@@ -127,7 +127,8 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
           precioVentaMenor: widget.precioVentaMenor,
           precioVentaMayor: widget.precioVentaMayor,
           precioPaquete: widget.precioPaquete,
-          lote: widget.lote,
+          lote:
+              colorConCantidad.lote ?? '', // Usar el lote individual del color
           fechaVencimiento: widget.fechaVencimiento,
           observaciones: widget.observaciones,
         );
@@ -138,6 +139,13 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
         _metrajeControllers[item.id] = TextEditingController(
           text: colorConCantidad.cantidad.toString(),
         );
+
+        // Crear controlador para el lote
+        _loteControllers[item.id] = TextEditingController(
+          text:
+              colorConCantidad.lote ?? '', // Usar el lote individual del color
+        );
+
         // Generar el siguiente código para el próximo item
         codigoActual = _codigoService.generarSiguienteCodigo(codigoActual);
       }
@@ -148,31 +156,22 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
     });
   }
 
-  // Obtener el siguiente código en la secuencia
-  String _siguienteCodigo(String codigoActual) {
-    // Formato esperado: A-0001, B-0001, etc.
-    final partes = codigoActual.split('-');
-    if (partes.length != 2) return 'A-0001';
-
-    final letra = partes[0];
-    final numero = int.tryParse(partes[1]) ?? 0;
-
-    if (numero < 9999) {
-      // Incrementar el número
-      return '$letra-${(numero + 1).toString().padLeft(4, '0')}';
-    } else {
-      // Cambiar a la siguiente letra
-      final siguienteLetra = String.fromCharCode(letra.codeUnitAt(0) + 1);
-      return '$siguienteLetra-0001';
-    }
-  }
-
   // Actualizar el metraje de un item específico
   void _actualizarMetraje(String itemId, double nuevoMetraje) {
     setState(() {
       final index = _items.indexWhere((item) => item.id == itemId);
       if (index != -1) {
         _items[index] = _items[index].copyWith(metraje: nuevoMetraje);
+      }
+    });
+  }
+
+  // Actualizar el lote de un item específico
+  void _actualizarLote(String itemId, String nuevoLote) {
+    setState(() {
+      final index = _items.indexWhere((item) => item.id == itemId);
+      if (index != -1) {
+        _items[index] = _items[index].copyWith(lote: nuevoLote);
       }
     });
   }
@@ -218,22 +217,23 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
           idEmpresa: widget.idEmpresa,
           idTipoProducto: widget.tipoProducto.id,
           idColor: item.color.id,
-          cantidad: item.metraje, // Usamos el metraje editado por el usuario
+          cantidad: item.metraje,
           cantidadReservado: 0,
           cantidadAprobado: 0,
-          unidades: 1, // Cada item es una unidad individual
+          unidades: 1,
           precioCompra: item.precioCompra,
           precioVentaMenor: item.precioVentaMenor,
           precioVentaMayor: item.precioVentaMayor,
           precioPaquete: item.precioPaquete,
           fechaIngreso: DateTime.now(),
-          lote: item.lote,
+          lote: item.lote!.isNotEmpty
+              ? item.lote
+              : null, // Guardar solo si no está vacío
           fechaVencimiento: item.fechaVencimiento,
           observaciones: item.observaciones,
           deleted: false,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-          // Campos adicionales del TipoProducto
           categoria: widget.tipoProducto.categoria,
           nombre: widget.tipoProducto.nombre,
           unidadMedida: widget.tipoProducto.unidadMedida,
@@ -244,7 +244,6 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
           updatedBy: widget.userId,
           deletedBy: null,
           deletedAt: null,
-          // CAMPO NUEVO: Guardar el código único del rollo
           codigoUnico: item.codigo,
           idMoneda: widget.moneda!.id,
           tipoCambio: widget.tipoCambio,
@@ -307,10 +306,6 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text('Total de items: ${_items.length}'),
-                    if (widget.lote != null) ...[
-                      const SizedBox(height: 4),
-                      Text('Lote: ${widget.lote}'),
-                    ],
                     if (widget.fechaVencimiento != null) ...[
                       const SizedBox(height: 4),
                       Text(
@@ -333,113 +328,137 @@ class _DetalleStockScreenState extends State<DetalleStockScreen> {
             child: Row(
               children: [
                 SizedBox(
-                  width: 40,
+                  width: 30,
                   child: Text('#', textAlign: TextAlign.center),
                 ),
-                SizedBox(width: 20),
-                Expanded(flex: 2, child: Text('Color')),
-                SizedBox(width: 20),
-                Expanded(flex: 2, child: Text('Código')),
-                SizedBox(width: 20),
+                SizedBox(width: 8),
+                Expanded(flex: 3, child: Text('Color')),
+                SizedBox(width: 8),
+                Expanded(flex: 3, child: Text('Código')),
+                SizedBox(width: 8),
+                Expanded(flex: 3, child: Text('Lote')),
+                SizedBox(width: 8),
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: Text('Metraje (${widget.tipoProducto.unidadMedida})'),
                 ),
               ],
             ),
           ),
 
-          // Lista de items en formato de tabla
+          // Lista de items en formato de tabla con scroll horizontal
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final item = _items[index];
-                return Container(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey[300]!),
+            child: SingleChildScrollView(
+              child: Column(
+                children: List.generate(_items.length, (index) {
+                  final item = _items[index];
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey[300]!),
+                      ),
                     ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 12.0,
-                    ),
-                    child: Row(
-                      children: [
-                        // Número de item
-                        SizedBox(
-                          width: 40,
-                          child: Text(
-                            '${index + 1}',
-                            textAlign: TextAlign.center,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 12.0,
+                      ),
+                      child: Row(
+                        children: [
+                          // Número de item
+                          SizedBox(
+                            width: 30,
+                            child: Text(
+                              '${index + 1}',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 20),
+                          const SizedBox(width: 8),
 
-                        // Color
-                        Expanded(
-                          flex: 2,
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: _parseColor(item.color.codigoColor),
-                                  shape: BoxShape.circle,
+                          // Color
+                          Expanded(
+                            flex: 3,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: _parseColor(item.color.codigoColor),
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  item.color.nombreColor,
-                                  overflow: TextOverflow.ellipsis,
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    item.color.nombreColor,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 20),
+                          const SizedBox(width: 8),
 
-                        // Código
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            item.codigo,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-
-                        // Input de metraje
-                        Expanded(
-                          flex: 2,
-                          child: TextFormField(
-                            controller: _metrajeControllers[item.id],
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
+                          // Código
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              item.codigo,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            keyboardType: TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            onChanged: (value) {
-                              final metraje = double.tryParse(value) ?? 0.0;
-                              _actualizarMetraje(item.id, metraje);
-                            },
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+
+                          // Input de lote
+                          Expanded(
+                            flex: 3,
+                            child: TextFormField(
+                              controller: _loteControllers[item.id],
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                hintText: 'Lote',
+                              ),
+                              onChanged: (value) {
+                                _actualizarLote(item.id, value);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Input de metraje
+                          Expanded(
+                            flex: 3,
+                            child: TextFormField(
+                              controller: _metrajeControllers[item.id],
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                              ),
+                              keyboardType: TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              onChanged: (value) {
+                                final metraje = double.tryParse(value) ?? 0.0;
+                                _actualizarMetraje(item.id, metraje);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                }),
+              ),
             ),
           ),
 
