@@ -25,7 +25,7 @@ class StockLoteTiendaService extends BaseService {
   Future<List<StockLoteTienda>> getLotesByTienda(String idTienda) async {
     try {
       // Primero obtenemos los stocks de tienda de la tienda
-      final stockTiendaRef = FirebaseDatabase.instance.ref('stock_tienda');
+      final stockTiendaRef = buildRef('stock_tienda');
       final stockTiendaSnapshot = await stockTiendaRef
           .orderByChild('idTienda')
           .equalTo(idTienda)
