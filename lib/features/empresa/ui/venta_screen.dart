@@ -390,6 +390,8 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
         .where((s) => s.nombre == manager.productoSeleccionado?.nombre)
         .toList();
 
+    print("stockDelProducto:" + stockDelProducto.toString());
+
     if (stockDelProducto.isEmpty) {
       return Center(child: Text('No hay stock disponible para este producto'));
     }
@@ -731,35 +733,47 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
   ) {
     final carritoManager = Provider.of<CarritoManager>(context, listen: false);
     final TextEditingController cantidadController = TextEditingController();
+    final TextEditingController precioUnitarioController =
+        TextEditingController();
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-    // Determinar el precio según la cantidad
-    double precioUnitario = lote.precioVentaMenor ?? 0;
+    // Variables iniciales
     double subtotal = 0;
+    double precioUnitario = lote.precioVentaMenor ?? 0;
+    precioUnitarioController.text = precioUnitario.toStringAsFixed(2);
 
-    // Mostrar diálogo de venta por metro
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          // Función para calcular el subtotal
+          // 🔹 Función para actualizar el subtotal cada vez que cambie cantidad o precio
           void calcularSubtotal() {
             final cantidad = double.tryParse(cantidadController.text) ?? 0;
-
-            // Determinar si es precio por mayor o menor
-            if (cantidad >= 10) {
-              precioUnitario =
-                  lote.precioVentaMayor ?? lote.precioVentaMenor ?? 0;
-            } else {
-              precioUnitario = lote.precioVentaMenor ?? 0;
-            }
+            final precioInput =
+                double.tryParse(precioUnitarioController.text) ?? 0;
 
             setState(() {
-              subtotal = cantidad * precioUnitario;
+              subtotal = cantidad * precioInput;
             });
           }
 
-          // Validar si la cantidad excede el disponible
+          // 🔹 Función para actualizar el precio sugerido automáticamente según cantidad
+          void actualizarPrecioSugerido() {
+            final cantidad = double.tryParse(cantidadController.text) ?? 0;
+            double nuevoPrecio;
+
+            if (cantidad >= 10) {
+              nuevoPrecio = lote.precioVentaMayor ?? lote.precioVentaMenor ?? 0;
+            } else {
+              nuevoPrecio = lote.precioVentaMenor ?? 0;
+            }
+
+            // Solo actualizar si el usuario no modificó manualmente
+            precioUnitarioController.text = nuevoPrecio.toStringAsFixed(2);
+            calcularSubtotal();
+          }
+
+          // 🔹 Verificar si la cantidad excede el stock disponible
           bool excedeStock = false;
           Color? cardColor;
 
@@ -806,7 +820,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Información del producto
+                    // 🔹 Información del producto
                     _buildInfoCard(
                       title: 'Información del Producto',
                       children: [
@@ -835,12 +849,13 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
 
                     SizedBox(height: 16),
 
-                    // Campos de entrada
+                    // 🔹 Campos de entrada
                     Container(
                       color: cardColor,
                       child: _buildInputCard(
                         title: 'Detalles de Venta',
                         children: [
+                          // Cantidad
                           TextFormField(
                             controller: cantidadController,
                             decoration: InputDecoration(
@@ -849,11 +864,18 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                               border: OutlineInputBorder(),
                               prefixIcon: Icon(Icons.inventory_2),
                               hintText: 'Ingrese la cantidad a vender',
+                              helperText:
+                                  '10+ unidades aplica precio por mayor automáticamente',
+                              suffixIcon: cantidad >= 10
+                                  ? Icon(Icons.trending_up, color: Colors.green)
+                                  : null,
                             ),
                             keyboardType: TextInputType.numberWithOptions(
                               decimal: true,
                             ),
-                            onChanged: (value) => calcularSubtotal(),
+                            onChanged: (value) {
+                              actualizarPrecioSugerido();
+                            },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Ingrese una cantidad';
@@ -862,11 +884,49 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                               if (cantidad == null || cantidad <= 0) {
                                 return 'Ingrese una cantidad válida';
                               }
-                              // No validamos que no exceda el stock, solo advertimos
                               return null;
                             },
                           ),
+
                           SizedBox(height: 12),
+
+                          // 🔹 Precio unitario editable
+                          TextFormField(
+                            controller: precioUnitarioController,
+                            decoration: InputDecoration(
+                              labelText: 'Precio Unitario (\$)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.attach_money),
+                              hintText:
+                                  'Ingrese o modifique el precio unitario',
+                              helperText:
+                                  'Puede modificar el precio sugerido según el cliente',
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.refresh),
+                                tooltip: 'Restablecer precio sugerido',
+                                onPressed: () {
+                                  actualizarPrecioSugerido();
+                                },
+                              ),
+                            ),
+                            keyboardType: TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            onChanged: (value) => calcularSubtotal(),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Ingrese el precio unitario';
+                              }
+                              final precio = double.tryParse(value);
+                              if (precio == null || precio <= 0) {
+                                return 'Ingrese un precio válido';
+                              }
+                              return null;
+                            },
+                          ),
+
+                          SizedBox(height: 12),
+
                           if (excedeStock)
                             Container(
                               padding: EdgeInsets.all(8),
@@ -887,22 +947,21 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                                 ],
                               ),
                             ),
+
                           SizedBox(height: 12),
-                          _buildInfoRow(
-                            'Precio unitario:',
-                            '\$${precioUnitario.toStringAsFixed(2)}',
-                            isBold: true,
-                          ),
-                          SizedBox(height: 8),
+
+                          // Subtotal dinámico
                           _buildInfoRow(
                             'Subtotal:',
                             '\$${subtotal.toStringAsFixed(2)}',
                             isBold: true,
                           ),
+
                           SizedBox(height: 8),
+
                           _buildInfoRow(
                             'Cantidad restante:',
-                            '${lote.cantidadDisponible - cantidad} ${stock.unidadMedidaSecundaria}',
+                            '${(lote.cantidadDisponible - cantidad).toStringAsFixed(2)} ${stock.unidadMedidaSecundaria}',
                             color: Colors.red,
                           ),
                         ],
@@ -921,8 +980,10 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                 onPressed: () {
                   if (formKey.currentState!.validate()) {
                     final cantidad = double.parse(cantidadController.text);
+                    final precioFinal = double.parse(
+                      precioUnitarioController.text,
+                    );
 
-                    // Crear item del carrito con todos los campos necesarios
                     final item = CarritoItem(
                       id: '${lote.id}_${DateTime.now().millisecondsSinceEpoch}',
                       idProducto: stock.id,
@@ -930,7 +991,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                       idColor: stock.idColor,
                       nombreColor: stock.colorNombre,
                       codigoColor: stock.colorCodigo,
-                      precio: precioUnitario,
+                      precio: precioFinal,
                       cantidad: cantidad,
                       tipoVenta: 'UNIDAD_ABIERTA',
                       idStockLoteTienda: lote.id,
@@ -938,13 +999,10 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                       codigoUnico: lote.codigoUnico,
                     );
 
-                    // Agregar al carrito
                     carritoManager.agregarUnidadAbierta(item, lote.id);
 
-                    // Cerrar modal
                     Navigator.pop(context);
 
-                    // Mostrar mensaje de éxito
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Producto agregado al carrito'),
@@ -1273,63 +1331,181 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
 
     final carritoManager = Provider.of<CarritoManager>(context, listen: false);
 
-    // Mostrar diálogo de confirmación simple
+    // Inicializar controladores fuera del StatefulBuilder
+    final TextEditingController precioController = TextEditingController(
+      text: stockTienda.precioPaquete?.toStringAsFixed(2) ?? "0.00",
+    );
+
+    final TextEditingController subtotalController = TextEditingController(
+      text: ((stockTienda.precioPaquete ?? 0) * (stockTienda.cantidad ?? 1))
+          .toStringAsFixed(2),
+    );
+
+    double precioActual = stockTienda.precioPaquete ?? 0;
+    final cantidad = stockTienda.cantidad ?? 1;
+
+    // Variable para controlar qué campo está siendo editado
+    bool isEditingPrecio = true;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirmar venta'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Producto: ${stock.nombre}'),
-            Text('Color: ${stock.colorNombre}'),
-            Text('Cantidad: ${stockTienda.cantidad ?? "N/A"}'),
-            Text('Código: ${stockTienda.codigoUnico ?? "N/A"}'),
-            Text(
-              'Subtotal: \$${((stockTienda.precioPaquete! * stockTienda.cantidad!) ?? 0).toStringAsFixed(2)}',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Crear item del carrito con valores fijos
-              print(stock.toString());
-              final item = CarritoItem(
-                id: '${stockTienda.id}_rollo_${DateTime.now().millisecondsSinceEpoch}',
-                idProducto: stock.id,
-                nombreProducto: stock.nombre,
-                idColor: stock.idColor,
-                nombreColor: stock.colorNombre,
-                codigoColor: stock.colorCodigo,
-                codigoUnico: stock.codigoUnico,
-                precio: stockTienda.precioPaquete ?? 0,
-                cantidad: stockTienda.cantidad,
-                tipoVenta: 'UNIDAD_COMPLETA',
-                idStockTienda: stockTienda.id,
-                idUsuario: _userId ?? 'usuario_desconocido',
-              );
-              print('Calor de Carrito:\n' + item.toString());
-              // Agregar al carrito
-              carritoManager.agregarUnidadCompleta(item, stockTienda.id);
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Icon(Icons.sell_outlined, color: Colors.teal),
+                  SizedBox(width: 8),
+                  Text(
+                    'Confirmar venta por rollo',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _detalleItem('Producto', stock.nombre),
+                  _detalleItem('Color', stock.colorNombre ?? 'N/A'),
+                  _detalleItem('Código', stockTienda.codigoUnico ?? 'N/A'),
+                  _detalleItem('Cantidad', cantidad.toString()),
 
-              // Cerrar modal
-              Navigator.pop(context);
+                  const SizedBox(height: 12),
+                  Text(
+                    'Precio sugerido por paquete:',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  // Precio por paquete editable
+                  TextField(
+                    controller: precioController,
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      prefixText: '\$ ',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    onTap: () {
+                      isEditingPrecio = true;
+                    },
+                    onChanged: (value) {
+                      if (isEditingPrecio) {
+                        precioActual = double.tryParse(value) ?? 0;
+                        // Actualizar solo el texto del subtotal sin crear un nuevo controller
+                        subtotalController.text = (precioActual * cantidad)
+                            .toStringAsFixed(2);
+                      }
+                    },
+                  ),
 
-              // Mostrar mensaje de éxito
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Producto agregado al carrito'),
-                  backgroundColor: Colors.green,
+                  const SizedBox(height: 12),
+                  Text(
+                    'Subtotal:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  // Subtotal editable
+                  TextField(
+                    controller: subtotalController,
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      prefixText: '\$ ',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    onTap: () {
+                      isEditingPrecio = false;
+                    },
+                    onChanged: (value) {
+                      if (!isEditingPrecio) {
+                        double subtotal = double.tryParse(value) ?? 0;
+                        precioActual = cantidad > 0 ? subtotal / cantidad : 0;
+                        // Actualizar solo el texto del precio sin crear un nuevo controller
+                        precioController.text = precioActual.toStringAsFixed(2);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancelar'),
                 ),
-              );
-            },
-            child: Text('Confirmar'),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final item = CarritoItem(
+                      id: '${stockTienda.id}_rollo_${DateTime.now().millisecondsSinceEpoch}',
+                      idProducto: stock.id,
+                      nombreProducto: stock.nombre,
+                      idColor: stock.idColor,
+                      nombreColor: stock.colorNombre,
+                      codigoColor: stock.colorCodigo,
+                      codigoUnico: stock.codigoUnico,
+                      precio: precioActual,
+                      cantidad: cantidad,
+                      tipoVenta: 'UNIDAD_COMPLETA',
+                      idStockTienda: stockTienda.id,
+                      idUsuario: _userId ?? 'usuario_desconocido',
+                    );
+
+                    carritoManager.agregarUnidadCompleta(item, stockTienda.id);
+
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Producto agregado al carrito'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  icon: Icon(Icons.check_circle_outline),
+                  label: Text('Confirmar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Widget auxiliar para mostrar filas de detalle limpias
+  Widget _detalleItem(String titulo, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('$titulo:', style: TextStyle(fontWeight: FontWeight.w500)),
+          Flexible(
+            child: Text(
+              valor,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

@@ -7,7 +7,7 @@ class StockTienda {
   final String? idTipoProducto;
   final String? idColor;
 
-  final int unidades; 
+  final int unidades;
   final double cantidad;
   final double cantidadVendida;
   final double cantidadAperturada;
@@ -42,7 +42,8 @@ class StockTienda {
   final double tipoCambio;
 
   double get cantidadDisponible =>
-      unidades - cantidadAperturada - cantidadVendida;
+      unidades -
+      cantidadVendida; //CORREGIR se quito cantidad aperturado por que este no manda sino stock lote tienda
 
   StockTienda({
     required this.id,

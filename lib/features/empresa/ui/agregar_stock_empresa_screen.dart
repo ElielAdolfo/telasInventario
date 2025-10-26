@@ -41,6 +41,10 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
   late final TextEditingController _cantidadPrioritariaController;
   late final TextEditingController _unidadesController;
 
+  // Agregar estas variables para la búsqueda de colores
+  late TextEditingController _colorSearchController;
+  List<ColorProducto> _filteredColors = [];
+
   late final String? _userId;
   final BolsaColoresService _bolsaColoresService = BolsaColoresService();
 
@@ -63,6 +67,10 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
       text: _cantidadPrioritaria.toString(),
     );
     _unidadesController = TextEditingController(text: _unidades.toString());
+
+    // Inicializar el controlador de búsqueda de colores
+    _colorSearchController = TextEditingController();
+    _colorSearchController.addListener(_filterColors);
 
     _tipoProductoSeleccionado = widget.tipoProducto;
 
@@ -101,7 +109,36 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
     _fechaVencimientoController.dispose();
     _cantidadPrioritariaController.dispose();
     _unidadesController.dispose();
+
+    // Disponer del controlador de búsqueda de colores
+    _colorSearchController.removeListener(_filterColors);
+    _colorSearchController.dispose();
+
     super.dispose();
+  }
+
+  // Método para filtrar colores según el texto de búsqueda
+  void _filterColors() {
+    final searchTerm = _colorSearchController.text.toLowerCase();
+    setState(() {
+      if (searchTerm.isEmpty) {
+        // Si no hay término de búsqueda, mostrar todos los colores ordenados
+        final colorManager = Provider.of<ColorManager>(context, listen: false);
+        _filteredColors = List<ColorProducto>.from(colorManager.colores)
+          ..sort((a, b) => a.nombreColor.compareTo(b.nombreColor));
+      } else {
+        // Filtrar colores que coincidan con el término de búsqueda
+        final colorManager = Provider.of<ColorManager>(context, listen: false);
+        _filteredColors =
+            colorManager.colores
+                .where(
+                  (color) =>
+                      color.nombreColor.toLowerCase().contains(searchTerm),
+                )
+                .toList()
+              ..sort((a, b) => a.nombreColor.compareTo(b.nombreColor));
+      }
+    });
   }
 
   void _cargarDatosProducto(TipoProducto producto) {
@@ -824,11 +861,11 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
 
               const SizedBox(height: 24),
 
-              // Selección múltiple de colores
+              // Selector de colores similar al anterior pero ordenado alfabéticamente
               if (_tipoProductoSeleccionado?.requiereColor ?? false) ...[
                 const Text(
-                  'Seleccionar colores:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  'Seleccionar Color:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 Consumer<ColorManager>(
@@ -845,37 +882,125 @@ class _AgregarStockEmpresaScreenState extends State<AgregarStockEmpresaScreen> {
                       return const Text('No hay colores disponibles');
                     }
 
-                    return Wrap(
-                      spacing: 8,
-                      children: manager.colores.map((color) {
-                        return FilterChip(
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
+                    // Inicializar la lista filtrada si está vacía
+                    if (_filteredColors.isEmpty) {
+                      _filteredColors = List<ColorProducto>.from(
+                        manager.colores,
+                      )..sort((a, b) => a.nombreColor.compareTo(b.nombreColor));
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Campo de búsqueda de colores - ahora funcional
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
                             children: [
-                              Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: _parseColor(color.codigoColor),
-                                  shape: BoxShape.circle,
+                              const Icon(Icons.search, color: Colors.grey),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: _colorSearchController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Buscar color...',
+                                    border: InputBorder.none,
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                  style: TextStyle(color: Colors.black),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Text(color.nombreColor),
+                              // Botón para limpiar la búsqueda
+                              if (_colorSearchController.text.isNotEmpty)
+                                GestureDetector(
+                                  onTap: () {
+                                    _colorSearchController.clear();
+                                  },
+                                  child: const Icon(
+                                    Icons.clear,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                             ],
                           ),
-                          selected: false,
-                          onSelected: (selected) {
-                            if (selected) {
-                              _agregarColor(color);
-                            }
-                          },
-                          selectedColor: Theme.of(
-                            context,
-                          ).primaryColor.withOpacity(0.2),
-                          checkmarkColor: Theme.of(context).primaryColor,
-                        );
-                      }).toList(),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Lista horizontal de colores
+                        SizedBox(
+                          height: 80,
+                          child: _filteredColors.isEmpty
+                              ? const Center(
+                                  child: Text('No se encontraron colores'),
+                                )
+                              : ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: _filteredColors.length,
+                                  itemBuilder: (context, index) {
+                                    final color = _filteredColors[index];
+                                    return GestureDetector(
+                                      onTap: () => _agregarColor(color),
+                                      child: Container(
+                                        width: 80,
+                                        margin: const EdgeInsets.only(
+                                          right: 12,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Container(
+                                              width: 50,
+                                              height: 50,
+                                              decoration: BoxDecoration(
+                                                color: _parseColor(
+                                                  color.codigoColor,
+                                                ),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.grey,
+                                                  width: 1,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.2),
+                                                    blurRadius: 2,
+                                                    offset: const Offset(0, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Container(
+                                              height: 20,
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                color.nombreColor,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.black,
+                                                ),
+                                                maxLines: 2,
+                                                textAlign: TextAlign.center,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
                     );
                   },
                 ),

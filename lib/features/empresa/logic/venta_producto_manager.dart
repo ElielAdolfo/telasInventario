@@ -154,70 +154,6 @@ class VentaProductoManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<StockLoteTienda>> getLotesPorProductoColor(
-    String nombreProducto,
-    String colorNombre,
-    String tiendaId,
-  ) async {
-    try {
-      print(
-        "Buscando lotes para producto: $nombreProducto, color: $colorNombre, tienda: $tiendaId",
-      );
-
-      // Obtener stocks de tienda para la tienda específica
-      final stocksTienda = await _stockTiendaService.getStockByTienda(tiendaId);
-      print("Stocks de tienda obtenidos: ${stocksTienda.length}");
-
-      // Filtrar los stocks de tienda que coincidan con el nombre y color
-      final stocksFiltrados = stocksTienda
-          .where(
-            (s) => s.nombre == nombreProducto && s.colorNombre == colorNombre,
-          )
-          .toList();
-
-      print("Stocks filtrados: ${stocksFiltrados.length}");
-
-      if (stocksFiltrados.isEmpty) {
-        print(
-          "No se encontraron stocks de tienda para el producto y color especificados",
-        );
-        return [];
-      }
-
-      // Obtener los IDs de los stocks de tienda filtrados
-      final idsStockTienda = stocksFiltrados.map((s) => s.id).toList();
-      print("IDs de stocks de tienda: $idsStockTienda");
-
-      // Obtener todos los lotes disponibles
-      final List<StockLoteTienda> todosLotes = [];
-
-      for (String idStockTienda in idsStockTienda) {
-        print("Buscando lotes para stock de tienda: $idStockTienda");
-        final lotes = await _stockLoteTiendaService.getLotesByStockTienda(
-          idStockTienda,
-        );
-        print("Lotes encontrados para $idStockTienda: ${lotes.length}");
-        todosLotes.addAll(lotes);
-      }
-
-      print("Total de lotes: ${todosLotes.length}");
-
-      // Filtrar los lotes que estén abiertos y tengan stock disponible
-      final lotesFiltrados = todosLotes
-          .where((lote) => !lote.estaCerrada && lote.cantidadDisponible > 0)
-          .toList();
-
-      print("Lotes filtrados (abiertos y con stock): ${lotesFiltrados.length}");
-
-      return lotesFiltrados;
-    } catch (e) {
-      print("Error en getLotesPorProductoColor: $e");
-      _error = e.toString();
-      notifyListeners();
-      return [];
-    }
-  }
-
   // Método para obtener unidades abiertas de un producto específico por nombre y color
   Future<List<StockUnidadAbierta>> getUnidadesAbiertasPorProductoColor(
     String nombreProducto,
@@ -404,25 +340,115 @@ class VentaProductoManager extends ChangeNotifier {
     }
   }
 
-  // Método para obtener stocks de tienda de un producto específico por nombre y color
+  // Modificar el método getStocksTiendaPorProductoColor
   Future<List<StockTienda>> getStocksTiendaPorProductoColor(
     String nombreProducto,
     String colorNombre,
     String idTienda,
   ) async {
-    print("datos: $nombreProducto $colorNombre $idTienda");
     try {
-      // Filtrar los stocks de tienda que coincidan con el nombre y color
+      print(
+        "Buscando stocks para: $nombreProducto, color: $colorNombre, tienda: $idTienda",
+      );
 
-      print(_productosConStock.toString());
+      // Obtener todos los stocks de tienda para el producto y color
       final stocksTienda = _productosConStock
           .where(
             (s) => s.nombre == nombreProducto && s.colorNombre == colorNombre,
           )
           .toList();
 
-      return stocksTienda;
+      // Si no hay stocks, devolver lista vacía
+      if (stocksTienda.isEmpty) {
+        print(
+          "No se encontraron stocks de tienda para el producto y color especificados",
+        );
+        return [];
+      }
+
+      // Obtener todos los lotes de la tienda para el producto y color
+      final List<StockLoteTienda> todosLotes = [];
+      for (var stock in stocksTienda) {
+        final lotes = await _stockLoteTiendaService.getLotesByStockTienda(
+          stock.id,
+        );
+        todosLotes.addAll(lotes);
+      }
+
+      // Crear un mapa para saber qué stocks tienen lotes abiertos
+      final Map<String, bool> stockTieneLoteAbierto = {};
+      for (var lote in todosLotes) {
+        if (!lote.estaCerrada) {
+          // Si el lote está abierto
+          stockTieneLoteAbierto[lote.idStockTienda] = true;
+        }
+      }
+
+      // Filtrar solo los stocks que NO tienen lotes abiertos
+      final stocksFiltrados = stocksTienda.where((stock) {
+        return !stockTieneLoteAbierto.containsKey(stock.id);
+      }).toList();
+
+      print("Stocks filtrados (no abiertos): ${stocksFiltrados.length}");
+      return stocksFiltrados;
     } catch (e) {
+      print("Error en getStocksTiendaPorProductoColor: $e");
+      _error = e.toString();
+      notifyListeners();
+      return [];
+    }
+  }
+
+  // Asegurar que getLotesPorProductoColor solo devuelva lotes abiertos
+  Future<List<StockLoteTienda>> getLotesPorProductoColor(
+    String nombreProducto,
+    String colorNombre,
+    String tiendaId,
+  ) async {
+    try {
+      print(
+        "Buscando lotes para producto: $nombreProducto, color: $colorNombre, tienda: $tiendaId",
+      );
+
+      // Obtener stocks de tienda para la tienda específica
+      final stocksTienda = await _stockTiendaService.getStockByTienda(tiendaId);
+
+      // Filtrar los stocks de tienda que coincidan con el nombre y color
+      final stocksFiltrados = stocksTienda
+          .where(
+            (s) => s.nombre == nombreProducto && s.colorNombre == colorNombre,
+          )
+          .toList();
+
+      if (stocksFiltrados.isEmpty) {
+        print(
+          "No se encontraron stocks de tienda para el producto y color especificados",
+        );
+        return [];
+      }
+
+      // Obtener los IDs de los stocks de tienda filtrados
+      final idsStockTienda = stocksFiltrados.map((s) => s.id).toList();
+
+      // Obtener todos los lotes disponibles
+      final List<StockLoteTienda> todosLotes = [];
+
+      for (String idStockTienda in idsStockTienda) {
+        final lotes = await _stockLoteTiendaService.getLotesByStockTienda(
+          idStockTienda,
+        );
+        todosLotes.addAll(lotes);
+      }
+
+      // Filtrar los lotes que estén abiertos y tengan stock disponible
+      final lotesFiltrados = todosLotes
+          .where((lote) => !lote.estaCerrada && lote.cantidadDisponible > 0)
+          .toList();
+
+      print("Lotes filtrados (abiertos): ${lotesFiltrados.length}");
+      return lotesFiltrados;
+    } catch (e) {
+      print("Error en getLotesPorProductoColor: $e");
       _error = e.toString();
       notifyListeners();
       return [];

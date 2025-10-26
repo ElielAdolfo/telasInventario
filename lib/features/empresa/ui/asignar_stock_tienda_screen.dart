@@ -10,6 +10,7 @@ import 'package:inventario/features/empresa/models/color_model.dart';
 import 'package:inventario/features/empresa/models/solicitud_traslado_model.dart';
 import 'package:inventario/features/empresa/models/stock_empresa_model.dart';
 import 'package:inventario/features/empresa/models/tipo_producto_model.dart';
+import 'package:inventario/features/empresa/ui/widgets/color_selector_widget.dart';
 import 'package:provider/provider.dart';
 import '../../empresa/models/tienda_model.dart';
 import '../../empresa/logic/tienda_manager.dart';
@@ -272,6 +273,8 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
               _colorSeleccionado =
                   null; // Resetear color al cambiar de producto
               _stockEncontradoId = null; // Resetear el stock encontrado
+
+              // Solo limpiar la lista cuando se cambia de producto, no de color
               _productosAsignar = []; // Limpiar lista al cambiar de producto
               _cantidadControllers = {}; // Limpiar controladores
             });
@@ -303,53 +306,16 @@ class _AsignarStockTiendaScreenState extends State<AsignarStockTiendaScreen> {
           return const Text('No hay colores disponibles');
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Seleccionar Color:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: manager.colores.map((color) {
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _colorSeleccionado = color;
-                      _stockEncontradoId = null; // Resetear el stock encontrado
-                      _productosAsignar =
-                          []; // Limpiar lista al cambiar de color
-                      _cantidadControllers = {}; // Limpiar controladores
-                    });
-                  },
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _parseColor(color.codigoColor),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _colorSeleccionado?.id == color.id
-                            ? Colors.black
-                            : Colors.grey,
-                        width: _colorSeleccionado?.id == color.id ? 3 : 1,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            if (_colorSeleccionado != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  'Color seleccionado: ${_colorSeleccionado!.nombreColor}',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-          ],
+        return ColorSelectorWithSearch(
+          colores: manager.colores,
+          selectedColor: _colorSeleccionado,
+          onColorSelected: (color) {
+            setState(() {
+              _colorSeleccionado = color;
+              _stockEncontradoId = null; // Resetear el stock encontrado
+            });
+          },
+          hintText: 'Buscar color...',
         );
       },
     );
