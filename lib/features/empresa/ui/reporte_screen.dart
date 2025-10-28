@@ -3,15 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/models/reporte_filtro_model.dart';
+import 'package:pdf/pdf.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:printing/printing.dart';
+import 'package:pdf/widgets.dart' as pw;
+
 import '../models/venta_model.dart';
 import '../models/stock_tienda_model.dart';
 import '../models/stock_empresa_model.dart';
 import '../services/reporte_service.dart';
-import '../services/venta_service.dart'; // Importar el VentaService
+import '../services/venta_service.dart';
 import '../logic/tienda_manager.dart';
 import '../models/tienda_model.dart';
+import 'package:inventario/features/empresa/reportes/pdf_generator.dart';
 
 class ReporteScreen extends StatefulWidget {
   final String empresaId;
@@ -24,7 +29,7 @@ class ReporteScreen extends StatefulWidget {
 }
 
 class _ReporteScreenState extends State<ReporteScreen> {
-  final VentaService _ventaService = VentaService(); // Usar VentaService
+  final VentaService _ventaService = VentaService();
   final ReporteService _reporteService = ReporteService();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -38,6 +43,7 @@ class _ReporteScreenState extends State<ReporteScreen> {
   List<StockTienda> _stockTienda = [];
   List<StockEmpresa> _stockEmpresa = [];
   bool _isLoading = false;
+  bool _isGeneratingPdf = false;
   String? _error;
 
   @override
@@ -157,13 +163,44 @@ class _ReporteScreenState extends State<ReporteScreen> {
 
               const SizedBox(height: 16),
 
-              // Botón de generar reporte
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _generarReporte,
-                  child: const Text('Generar Reporte'),
-                ),
+              // Botones de generar reporte y generar PDF
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _generarReporte,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Generar Reporte'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _generarPdf,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: _isGeneratingPdf
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Generar PDF'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -395,7 +432,9 @@ class _ReporteScreenState extends State<ReporteScreen> {
                   ),
                   child: ListTile(
                     title: Text(stock.nombre),
-                    subtitle: Text('Color: ${stock.idColor}'),
+                    subtitle: Text(
+                      'Color: ${stock.idColor}',
+                    ), // Corregido: usar idColor en lugar de colorNombre
                     trailing: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -431,26 +470,22 @@ class _ReporteScreenState extends State<ReporteScreen> {
       switch (_filtro.tipoReporte) {
         case 'ventas_dia':
           if (widget.tienda != null) {
-            // Usar VentaService para obtener ventas del día por tienda
             _ventas = await _ventaService.getVentasByTiendaAndDate(
               widget.tienda!.id,
               _filtro.fechaInicio ?? DateTime.now(),
             );
           } else {
-            // Si no hay tienda, mostrar error
             _error = 'Debe seleccionar una tienda para ver las ventas del día';
           }
           break;
 
         case 'ventas_rango':
-          // Usar VentaService para obtener ventas por rango de fechas
           if (widget.tienda != null) {
             _ventas = await _ventaService.getVentasByTiendaAndDate(
               widget.tienda!.id,
               _filtro.fechaInicio ?? DateTime.now(),
             );
 
-            // Filtrar por rango de fechas
             DateTime fechaFin = _filtro.fechaFin ?? DateTime.now();
             _ventas = _ventas
                 .where(
@@ -490,6 +525,114 @@ class _ReporteScreenState extends State<ReporteScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _generarPdf() async {
+    // Si no hay datos cargados, generar el reporte primero
+    if (_ventas.isEmpty && _stockTienda.isEmpty && _stockEmpresa.isEmpty) {
+      await _generarReporte();
+    }
+
+    // Si después de generar el reporte no hay datos, mostrar un mensaje
+    if (_ventas.isEmpty && _stockTienda.isEmpty && _stockEmpresa.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay datos para generar el PDF')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isGeneratingPdf = true;
+    });
+
+    try {
+      pw.Document pdf;
+      String titulo;
+
+      if (_ventas.isNotEmpty) {
+        titulo =
+            'Reporte de Ventas - ${widget.tienda?.nombre ?? widget.empresaId}';
+        pdf = await ReportPdfGenerator.generateVentasPdf(
+          ventas: _ventas,
+          titulo: titulo,
+        );
+      } else if (_stockTienda.isNotEmpty) {
+        titulo =
+            'Stock Actual de Tienda - ${widget.tienda?.nombre ?? widget.empresaId}';
+        pdf = await ReportPdfGenerator.generateStockTiendaPdf(
+          stockTienda: _stockTienda,
+          titulo: titulo,
+        );
+      } else {
+        titulo = 'Stock Actual de Empresa - ${widget.empresaId}';
+        pdf = await ReportPdfGenerator.generateStockEmpresaPdf(
+          stockEmpresa: _stockEmpresa,
+          titulo: titulo,
+        );
+      }
+
+      // Mostrar vista previa del PDF en un modal
+      await _showPdfPreview(pdf, titulo);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al generar PDF: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        _isGeneratingPdf = false;
+      });
+    }
+  }
+
+  Future<void> _showPdfPreview(pw.Document pdf, String titulo) async {
+    final pdfBytes = await pdf.save();
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: EdgeInsets.zero,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(titulo),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share),
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Share.shareFiles(['$titulo.pdf'], text: 'Reporte generado');
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.print),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await Printing.layoutPdf(
+                    onLayout: (PdfPageFormat format) async => pdfBytes,
+                  );
+                },
+              ),
+            ],
+          ),
+          body: InteractiveViewer(
+            panEnabled: false,
+            boundaryMargin: const EdgeInsets.all(20),
+            minScale: 0.5,
+            maxScale: 4,
+            child: Center(
+              child: PdfPreview(
+                build: (format) => pdfBytes,
+                allowPrinting: false,
+                allowSharing: false,
+                canChangeOrientation: false,
+                canChangePageFormat: false,
+                canDebug: false,
+                initialPageFormat: PdfPageFormat.letter,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _seleccionarFechaInicio() async {
@@ -568,11 +711,52 @@ class _ReporteScreenState extends State<ReporteScreen> {
     }
   }
 
-  void _descargarReporte() {
-    // Aquí podrías implementar la descarga en PDF o Excel
-    // Por ahora, mostraremos un mensaje
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Función de descarga en desarrollo')),
-    );
+  void _descargarReporte() async {
+    // Si no hay datos cargados, generar el reporte primero
+    if (_ventas.isEmpty && _stockTienda.isEmpty && _stockEmpresa.isEmpty) {
+      await _generarReporte();
+    }
+
+    // Si después de generar el reporte no hay datos, mostrar un mensaje
+    if (_ventas.isEmpty && _stockTienda.isEmpty && _stockEmpresa.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay datos para descargar el reporte')),
+      );
+      return;
+    }
+
+    try {
+      pw.Document pdf;
+      String titulo;
+
+      if (_ventas.isNotEmpty) {
+        titulo =
+            'Reporte de Ventas - ${widget.tienda?.nombre ?? widget.empresaId}';
+        pdf = await ReportPdfGenerator.generateVentasPdf(
+          ventas: _ventas,
+          titulo: titulo,
+        );
+      } else if (_stockTienda.isNotEmpty) {
+        titulo =
+            'Stock Actual de Tienda - ${widget.tienda?.nombre ?? widget.empresaId}';
+        pdf = await ReportPdfGenerator.generateStockTiendaPdf(
+          stockTienda: _stockTienda,
+          titulo: titulo,
+        );
+      } else {
+        titulo = 'Stock Actual de Empresa - ${widget.empresaId}';
+        pdf = await ReportPdfGenerator.generateStockEmpresaPdf(
+          stockEmpresa: _stockEmpresa,
+          titulo: titulo,
+        );
+      }
+
+      // Mostrar vista previa del PDF en un modal
+      await _showPdfPreview(pdf, titulo);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al descargar PDF: ${e.toString()}')),
+      );
+    }
   }
 }

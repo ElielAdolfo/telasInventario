@@ -737,7 +737,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
         TextEditingController();
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-    // Variables iniciales
     double subtotal = 0;
     double precioUnitario = lote.precioVentaMenor ?? 0;
     precioUnitarioController.text = precioUnitario.toStringAsFixed(2);
@@ -746,7 +745,8 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          // 🔹 Función para actualizar el subtotal cada vez que cambie cantidad o precio
+          bool _isLoading = false; // Variable para controlar estado de carga
+
           void calcularSubtotal() {
             final cantidad = double.tryParse(cantidadController.text) ?? 0;
             final precioInput =
@@ -757,7 +757,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
             });
           }
 
-          // 🔹 Función para actualizar el precio sugerido automáticamente según cantidad
           void actualizarPrecioSugerido() {
             final cantidad = double.tryParse(cantidadController.text) ?? 0;
             double nuevoPrecio;
@@ -768,12 +767,10 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
               nuevoPrecio = lote.precioVentaMenor ?? 0;
             }
 
-            // Solo actualizar si el usuario no modificó manualmente
             precioUnitarioController.text = nuevoPrecio.toStringAsFixed(2);
             calcularSubtotal();
           }
 
-          // 🔹 Verificar si la cantidad excede el stock disponible
           bool excedeStock = false;
           Color? cardColor;
 
@@ -820,7 +817,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 🔹 Información del producto
                     _buildInfoCard(
                       title: 'Información del Producto',
                       children: [
@@ -849,13 +845,11 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
 
                     SizedBox(height: 16),
 
-                    // 🔹 Campos de entrada
                     Container(
                       color: cardColor,
                       child: _buildInputCard(
                         title: 'Detalles de Venta',
                         children: [
-                          // Cantidad
                           TextFormField(
                             controller: cantidadController,
                             decoration: InputDecoration(
@@ -890,7 +884,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
 
                           SizedBox(height: 12),
 
-                          // 🔹 Precio unitario editable
                           TextFormField(
                             controller: precioUnitarioController,
                             decoration: InputDecoration(
@@ -950,7 +943,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
 
                           SizedBox(height: 12),
 
-                          // Subtotal dinámico
                           _buildInfoRow(
                             'Subtotal:',
                             '\$${subtotal.toStringAsFixed(2)}',
@@ -973,48 +965,72 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
                 child: Text('Cancelar'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    final cantidad = double.parse(cantidadController.text);
-                    final precioFinal = double.parse(
-                      precioUnitarioController.text,
-                    );
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (formKey.currentState!.validate()) {
+                          setState(() {
+                            _isLoading = true; // Activar estado de carga
+                          });
 
-                    final item = CarritoItem(
-                      id: '${lote.id}_${DateTime.now().millisecondsSinceEpoch}',
-                      idProducto: stock.id,
-                      nombreProducto: stock.nombre,
-                      idColor: stock.idColor,
-                      nombreColor: stock.colorNombre,
-                      codigoColor: stock.colorCodigo,
-                      precio: precioFinal,
-                      cantidad: cantidad,
-                      tipoVenta: 'UNIDAD_ABIERTA',
-                      idStockLoteTienda: lote.id,
-                      idUsuario: _userId ?? 'usuario_desconocido',
-                      codigoUnico: lote.codigoUnico,
-                    );
+                          final cantidad = double.parse(
+                            cantidadController.text,
+                          );
+                          final precioFinal = double.parse(
+                            precioUnitarioController.text,
+                          );
 
-                    carritoManager.agregarUnidadAbierta(item, lote.id);
+                          final item = CarritoItem(
+                            id: '${lote.id}_${DateTime.now().millisecondsSinceEpoch}',
+                            idProducto: stock.id,
+                            nombreProducto: stock.nombre,
+                            idColor: stock.idColor,
+                            nombreColor: stock.colorNombre,
+                            codigoColor: stock.colorCodigo,
+                            precio: precioFinal,
+                            cantidad: cantidad,
+                            tipoVenta: 'UNIDAD_ABIERTA',
+                            idStockLoteTienda: lote.id,
+                            idUsuario: _userId ?? 'usuario_desconocido',
+                            codigoUnico: lote.codigoUnico,
+                          );
 
-                    Navigator.pop(context);
+                          carritoManager.agregarUnidadAbierta(item, lote.id);
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Producto agregado al carrito'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                },
+                          Navigator.pop(context);
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Producto agregado al carrito'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                child: Text('Agregar al carrito'),
+                child: _isLoading
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Text('Procesando...'),
+                        ],
+                      )
+                    : Text('Agregar al carrito'),
               ),
             ],
           );
@@ -1318,7 +1334,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     StockTienda stockTienda,
     StockTienda stock,
   ) {
-    // Validar stock disponible
     if (stockTienda.cantidadDisponible < 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1330,8 +1345,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     }
 
     final carritoManager = Provider.of<CarritoManager>(context, listen: false);
-
-    // Inicializar controladores fuera del StatefulBuilder
     final TextEditingController precioController = TextEditingController(
       text: stockTienda.precioPaquete?.toStringAsFixed(2) ?? "0.00",
     );
@@ -1343,13 +1356,13 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
 
     double precioActual = stockTienda.precioPaquete ?? 0;
     final cantidad = stockTienda.cantidad ?? 1;
-
-    // Variable para controlar qué campo está siendo editado
     bool isEditingPrecio = true;
 
     showDialog(
       context: context,
       builder: (context) {
+        bool _isLoading = false; // Variable para controlar estado de carga
+
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
@@ -1381,7 +1394,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
-                  // Precio por paquete editable
                   TextField(
                     controller: precioController,
                     keyboardType: TextInputType.numberWithOptions(
@@ -1401,7 +1413,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     onChanged: (value) {
                       if (isEditingPrecio) {
                         precioActual = double.tryParse(value) ?? 0;
-                        // Actualizar solo el texto del subtotal sin crear un nuevo controller
                         subtotalController.text = (precioActual * cantidad)
                             .toStringAsFixed(2);
                       }
@@ -1414,7 +1425,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  // Subtotal editable
                   TextField(
                     controller: subtotalController,
                     keyboardType: TextInputType.numberWithOptions(
@@ -1435,7 +1445,6 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                       if (!isEditingPrecio) {
                         double subtotal = double.tryParse(value) ?? 0;
                         precioActual = cantidad > 0 ? subtotal / cantidad : 0;
-                        // Actualizar solo el texto del precio sin crear un nuevo controller
                         precioController.text = precioActual.toStringAsFixed(2);
                       }
                     },
@@ -1444,38 +1453,56 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: _isLoading ? null : () => Navigator.pop(context),
                   child: Text('Cancelar'),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    final item = CarritoItem(
-                      id: '${stockTienda.id}_rollo_${DateTime.now().millisecondsSinceEpoch}',
-                      idProducto: stock.id,
-                      nombreProducto: stock.nombre,
-                      idColor: stock.idColor,
-                      nombreColor: stock.colorNombre,
-                      codigoColor: stock.colorCodigo,
-                      codigoUnico: stock.codigoUnico,
-                      precio: precioActual,
-                      cantidad: cantidad,
-                      tipoVenta: 'UNIDAD_COMPLETA',
-                      idStockTienda: stockTienda.id,
-                      idUsuario: _userId ?? 'usuario_desconocido',
-                    );
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          setState(() {
+                            _isLoading = true; // Activar estado de carga
+                          });
 
-                    carritoManager.agregarUnidadCompleta(item, stockTienda.id);
+                          final item = CarritoItem(
+                            id: '${stockTienda.id}_rollo_${DateTime.now().millisecondsSinceEpoch}',
+                            idProducto: stock.id,
+                            nombreProducto: stock.nombre,
+                            idColor: stock.idColor,
+                            nombreColor: stock.colorNombre,
+                            codigoColor: stock.colorCodigo,
+                            codigoUnico: stock.codigoUnico,
+                            precio: precioActual,
+                            cantidad: cantidad,
+                            tipoVenta: 'UNIDAD_COMPLETA',
+                            idStockTienda: stockTienda.id,
+                            idUsuario: _userId ?? 'usuario_desconocido',
+                          );
 
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Producto agregado al carrito'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  },
-                  icon: Icon(Icons.check_circle_outline),
-                  label: Text('Confirmar'),
+                          carritoManager.agregarUnidadCompleta(
+                            item,
+                            stockTienda.id,
+                          );
+
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Producto agregado al carrito'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                  icon: _isLoading
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(Icons.check_circle_outline),
+                  label: Text(_isLoading ? 'Procesando...' : 'Confirmar'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
                     foregroundColor: Colors.white,
@@ -1521,99 +1548,138 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar apertura'),
-        content: Text(
-          '¿Está seguro de abrir el rollo ${stockTienda.codigoUnico ?? ""} de ${stock.nombre}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final resultado = await manager.abrirUnidad(
-                stockTienda.id,
-                1, // cantidadUnidades, por defecto 1
-                _userId!, // usuario actual
-                widget.tienda.id,
-                stockTienda.codigoUnico,
-                stockTienda.idTipoProducto!,
-                stockTienda.idEmpresa,
-                stockTienda.idColor,
-                stockTienda.cantidad, //cantidadMetraje
-                stockTienda.precioCompra,
-                stockTienda.precioVentaMenor,
-                stockTienda.precioVentaMayor,
-                stockTienda.precioPaquete!,
-                stockTienda.idMoneda,
-                stockTienda.tipoCambio,
-              );
+      builder: (context) {
+        bool _isLoading = false; // Variable para controlar estado de carga
 
-              Navigator.pop(context); // cerrar el diálogo de confirmación
-
-              if (resultado) {
-                // Mostrar modal informativo de éxito
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    title: Row(
-                      children: const [
-                        Icon(Icons.check_circle, color: Colors.green, size: 30),
-                        SizedBox(width: 10),
-                        Text('Éxito'),
-                      ],
-                    ),
-                    content: const Text('Unidad abierta correctamente.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context); // cerrar modal de éxito
-
-                          // 🔄 Refrescar lista después de cerrar el modal
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            recargar();
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Confirmar apertura'),
+              content: Text(
+                '¿Está seguro de abrir el rollo ${stockTienda.codigoUnico ?? ""} de ${stock.nombre}?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: _isLoading ? null : () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          setState(() {
+                            _isLoading = true; // Activar estado de carga
                           });
+
+                          final resultado = await manager.abrirUnidad(
+                            stockTienda.id,
+                            1,
+                            _userId!,
+                            widget.tienda.id,
+                            stockTienda.codigoUnico,
+                            stockTienda.idTipoProducto!,
+                            stockTienda.idEmpresa,
+                            stockTienda.idColor,
+                            stockTienda.cantidad,
+                            stockTienda.precioCompra,
+                            stockTienda.precioVentaMenor,
+                            stockTienda.precioVentaMayor,
+                            stockTienda.precioPaquete!,
+                            stockTienda.idMoneda,
+                            stockTienda.tipoCambio,
+                          );
+
+                          Navigator.pop(context);
+
+                          if (resultado) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                title: Row(
+                                  children: const [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                      size: 30,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text('Éxito'),
+                                  ],
+                                ),
+                                content: const Text(
+                                  'Unidad abierta correctamente.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      WidgetsBinding.instance
+                                          .addPostFrameCallback((_) {
+                                            recargar();
+                                          });
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                title: Row(
+                                  children: const [
+                                    Icon(
+                                      Icons.error,
+                                      color: Colors.red,
+                                      size: 30,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text('Error'),
+                                  ],
+                                ),
+                                content: Text(
+                                  manager.error ?? 'Error desconocido.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
                         },
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-              } else {
-                // Modal de error
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    title: Row(
-                      children: const [
-                        Icon(Icons.error, color: Colors.red, size: 30),
-                        SizedBox(width: 10),
-                        Text('Error'),
-                      ],
-                    ),
-                    content: Text(manager.error ?? 'Error desconocido.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            },
-            child: const Text('Abrir'),
-          ),
-        ],
-      ),
+                  child: _isLoading
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Procesando...'),
+                          ],
+                        )
+                      : const Text('Abrir'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
