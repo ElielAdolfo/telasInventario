@@ -1,5 +1,4 @@
 // lib/features/venta/models/carrito_item_model.dart
-
 class CarritoItem {
   final String id;
   final String idProducto;

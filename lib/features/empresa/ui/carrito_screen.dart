@@ -1,5 +1,4 @@
 // lib/features/venta/ui/carrito_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/carrito_manager.dart';
@@ -37,8 +36,9 @@ class _CarritoScreenState extends State<CarritoScreen>
     _userId = authManager.userId;
     _tabController = TabController(length: 2, vsync: this);
 
-    // Cargar ventas al iniciar
+    // Cargar carrito y ventas al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarCarrito();
       _cargarVentas();
     });
   }
@@ -47,6 +47,12 @@ class _CarritoScreenState extends State<CarritoScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // Método para cargar el carrito
+  Future<void> _cargarCarrito() async {
+    final carritoManager = Provider.of<CarritoManager>(context, listen: false);
+    await carritoManager.cargarCarrito(_userId ?? '');
   }
 
   // Método para cargar las ventas según el estado del switch
@@ -95,6 +101,26 @@ class _CarritoScreenState extends State<CarritoScreen>
           }
         } else {
           print("El carrito está vacío");
+        }
+
+        if (carritoManager.isLoading) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (carritoManager.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Error: ${carritoManager.error}'),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _cargarCarrito(),
+                  child: Text('Reintentar'),
+                ),
+              ],
+            ),
+          );
         }
 
         if (carritoManager.items.isEmpty) {
@@ -401,7 +427,7 @@ class _CarritoScreenState extends State<CarritoScreen>
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    // Obtener el usuario actual (aquí deberías obtenerlo de tu sistema de autenticación)
+    // Obtener el usuario actual
     final usuario = _userId ?? 'usuario_desconocido';
 
     // Crear la venta con todos los detalles necesarios
@@ -448,7 +474,7 @@ class _CarritoScreenState extends State<CarritoScreen>
     context
         .read<VentaManager>()
         .registrarVenta(venta)
-        .then((success) {
+        .then((success) async {
           // Cerrar indicador de carga usando una forma segura
           if (Navigator.canPop(context)) {
             Navigator.pop(context);
@@ -456,7 +482,7 @@ class _CarritoScreenState extends State<CarritoScreen>
 
           if (success) {
             // Vaciar carrito
-            carritoManager.vaciarCarrito();
+            await carritoManager.vaciarCarrito();
 
             // Cambiar a la pestaña de ventas
             _tabController.animateTo(1);

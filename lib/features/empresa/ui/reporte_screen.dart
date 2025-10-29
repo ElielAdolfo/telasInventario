@@ -626,7 +626,13 @@ class _ReporteScreenState extends State<ReporteScreen> {
                 canChangeOrientation: false,
                 canChangePageFormat: false,
                 canDebug: false,
-                initialPageFormat: PdfPageFormat.letter,
+                // Configurar tamaño carta
+                initialPageFormat: PdfPageFormat.letter.copyWith(
+                  marginTop: 2.0 * PdfPageFormat.cm,
+                  marginBottom: 2.0 * PdfPageFormat.cm,
+                  marginLeft: 2.0 * PdfPageFormat.cm,
+                  marginRight: 2.0 * PdfPageFormat.cm,
+                ),
               ),
             ),
           ),

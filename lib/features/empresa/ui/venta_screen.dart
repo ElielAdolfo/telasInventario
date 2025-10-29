@@ -1,5 +1,4 @@
 // lib/features/empresa/ui/venta_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:inventario/auth_manager.dart';
 import 'package:inventario/features/empresa/logic/jornada_manager.dart';
@@ -26,16 +25,10 @@ class VentaScreen extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
           create: (_) => VentaProductoManager(),
-          lazy: true, // Agregar lazy initialization
+          lazy: true,
         ),
-        ChangeNotifierProvider(
-          create: (_) => CarritoManager(),
-          lazy: true, // Agregar lazy initialization
-        ),
-        ChangeNotifierProvider(
-          create: (_) => JornadaManager(),
-          lazy: true, // Agregar lazy initialization
-        ),
+        ChangeNotifierProvider(create: (_) => CarritoManager(), lazy: true),
+        ChangeNotifierProvider(create: (_) => JornadaManager(), lazy: true),
       ],
       child: _VentaScreenContent(empresaId: empresaId, tienda: tienda),
     );
@@ -72,8 +65,14 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _verificarJornada();
+        _cargarCarrito(); // Agregar esta línea
       }
     });
+  }
+
+  Future<void> _cargarCarrito() async {
+    final carritoManager = Provider.of<CarritoManager>(context, listen: false);
+    await carritoManager.cargarCarrito(_userId ?? '');
   }
 
   @override
@@ -999,7 +998,10 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                             codigoUnico: lote.codigoUnico,
                           );
 
-                          carritoManager.agregarUnidadAbierta(item, lote.id);
+                          await carritoManager.agregarUnidadAbierta(
+                            item,
+                            lote.id,
+                          );
 
                           Navigator.pop(context);
 
@@ -1459,7 +1461,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                 ElevatedButton.icon(
                   onPressed: _isLoading
                       ? null
-                      : () {
+                      : () async {
                           setState(() {
                             _isLoading = true; // Activar estado de carga
                           });
@@ -1479,7 +1481,7 @@ class __VentaScreenContentState extends State<_VentaScreenContent> {
                             idUsuario: _userId ?? 'usuario_desconocido',
                           );
 
-                          carritoManager.agregarUnidadCompleta(
+                          await carritoManager.agregarUnidadCompleta(
                             item,
                             stockTienda.id,
                           );
